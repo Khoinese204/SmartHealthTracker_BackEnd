@@ -5,14 +5,14 @@ Hệ thống được xây dựng bằng **Spring Boot**, cung cấp các API đ
 
 ## 1. Công nghệ sử dụng
 
-- Spring Boot 3.x  
-- Java 21  
-- Spring Web  
-- Spring Data JPA (Hibernate)  
-- PostgreSQL  
-- Spring Security (JWT custom)  
-- Lombok  
-- Validation  
+- Spring Boot 3.x
+- Java 21
+- Spring Web
+- Spring Data JPA (Hibernate)
+- PostgreSQL
+- Spring Security (JWT custom)
+- Lombok
+- Validation
 - Springdoc OpenAPI (Swagger)
 
 ## 2. Cấu trúc hệ thống
@@ -28,18 +28,21 @@ com.example.smarthealth.backend
 ## 3. Cài đặt & chạy dự án
 
 ### Yêu cầu
-- JDK 21  
-- PostgreSQL  
-- Maven  
-- IntelliJ IDEA Community  
+
+- JDK 21
+- PostgreSQL
+- Maven
+- VSCode
 
 ### Bước 1 – Clone
+
 ```
 git clone https://github.com/Khoinese204/SmartHealthTracker_BackEnd.git
 
 ```
 
 ### Bước 2 – Cấu hình database (`application.yml`)
+
 ```yaml
 spring:
   datasource:
@@ -56,14 +59,9 @@ server:
 ```
 
 ### Bước 3 – Chạy dự án
+
 ```
 mvn spring-boot:run
 ```
 
 Mặc định chạy tại `http://localhost:8080`.
-
-
-
-
-
-
