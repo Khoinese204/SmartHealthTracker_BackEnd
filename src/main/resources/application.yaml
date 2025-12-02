@@ -1,15 +1,30 @@
+server:
+  port: ${PORT:8080} # Railway sẽ đưa PORT qua env, local thì mặc định 8080
+
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/smarthealth
-    username: postgres
-    password: 123456
+    # Local default
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/smarthealth}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
-        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
 
-server:
-  port: 8000
+jwt:
+  secret: ${JWT_SECRET:dev-secret} # Railway set JWT_SECRET, local dùng default
+
+# springdoc-openapi (Swagger)
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html # => /swagger-ui.html trên server
+    operations-sorter: alpha
+    tags-sorter: alpha
