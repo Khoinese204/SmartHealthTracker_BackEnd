@@ -1,23 +1,27 @@
-# Stage 1: Build
+# ====== Stage 1: Build JAR ======
 FROM eclipse-temurin:21-jdk AS build
 WORKDIR /app
 
-# copy toàn bộ source
-COPY . .
+# copy file cần thiết
+COPY .mvn/ .mvn/
+COPY mvnw pom.xml ./
+COPY src ./src
 
-# build jar (dùng maven wrapper)
+# cho phép thực thi mvnw (fix lỗi Permission denied)
+RUN chmod +x mvnw
+
+# build ứng dụng
 RUN ./mvnw -DskipTests clean package
 
-# Stage 2: Run
+
+# ====== Stage 2: Run JAR ======
 FROM eclipse-temurin:21-jre
 WORKDIR /app
 
-# copy file jar từ stage build sang
+# copy jar từ stage build sang
 COPY --from=build /app/target/*.jar app.jar
 
-# port trong container
 EXPOSE 8080
 ENV PORT=8080
 
-# run spring boot
-ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+ENTRYPOINT ["java","-jar","/app/app.jar"]
