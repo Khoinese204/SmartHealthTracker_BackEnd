@@ -28,6 +28,7 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**")
                         .permitAll()
+                        .requestMatchers("/api/health/steps/**").permitAll()
 
                         // Nếu sau này có health-check public
                         .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
