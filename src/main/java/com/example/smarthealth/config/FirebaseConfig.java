@@ -9,25 +9,27 @@ import org.springframework.context.annotation.Configuration;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.util.Base64;
 
 @Configuration
 public class FirebaseConfig {
 
-    @Value("${firebase.service-account-json}")
-    private String firebaseServiceAccountJson;
+    @Value("${firebase.service-account-json-base64:}")
+    private String firebaseServiceAccountJsonBase64;
 
     @Bean
     public FirebaseApp firebaseApp() throws IOException {
         if (FirebaseApp.getApps().isEmpty()) {
 
-            GoogleCredentials credentials;
-
-            if (firebaseServiceAccountJson != null && !firebaseServiceAccountJson.isBlank()) {
-                credentials = GoogleCredentials.fromStream(
-                        new ByteArrayInputStream(firebaseServiceAccountJson.getBytes()));
-            } else {
-                throw new IllegalStateException("Firebase service account JSON is missing!");
+            if (firebaseServiceAccountJsonBase64 == null || firebaseServiceAccountJsonBase64.isBlank()) {
+                throw new IllegalStateException(
+                        "Firebase service account JSON is missing! Set FIREBASE_SERVICE_ACCOUNT_JSON_BASE64 env.");
             }
+
+            byte[] decoded = Base64.getDecoder().decode(firebaseServiceAccountJsonBase64);
+
+            GoogleCredentials credentials = GoogleCredentials.fromStream(
+                    new ByteArrayInputStream(decoded));
 
             FirebaseOptions options = FirebaseOptions.builder()
                     .setCredentials(credentials)
