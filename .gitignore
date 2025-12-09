@@ -32,5 +32,17 @@ build/
 ### VS Code ###
 .vscode/
 
+### Logs ###
+*.log
+logs/
+
 ### ENV ###
 .env
+*.env.local
+.env.*
+
+### User Uploads ###
+uploads/
+upload/
+files/
+storage/

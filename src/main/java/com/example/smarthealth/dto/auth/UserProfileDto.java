@@ -16,6 +16,6 @@ public class UserProfileDto {
     private LocalDate dateOfBirth;
     private String gender;
     private Integer heightCm;
-    private BigDecimal weightKg;
+    private Double weightKg;
     private String role;
 }

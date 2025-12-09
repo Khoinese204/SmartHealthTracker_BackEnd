@@ -41,7 +41,7 @@ public class User {
     @Column(name = "height_cm")
     private Integer heightCm;
 
-    @Column(name = "weight_kg", precision = 5, scale = 2)
+    @Column(name = "weight_kg")
     private BigDecimal weightKg;
 
     @ManyToOne(fetch = FetchType.EAGER)
