@@ -13,6 +13,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -47,30 +48,36 @@ public class FirebaseAuthenticationFilter extends OncePerRequestFilter {
 
         try {
             FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
-
-            String firebaseUid = decodedToken.getUid();
             String email = decodedToken.getEmail();
-            String name = (String) decodedToken.getClaims().getOrDefault("name", email);
-            String picture = (String) decodedToken.getClaims().getOrDefault("picture", null);
 
-            // Tìm user trong DB, nếu chưa có thì tạo mới
-            User user = userRepository.findByFirebaseUid(firebaseUid)
-                    .orElseGet(() -> createUserFromFirebase(firebaseUid, email, name, picture));
+            if (email == null || email.isBlank()) {
+                logger.warn("Firebase token has no email");
+                filterChain.doFilter(request, response);
+                return;
+            }
 
-            // Tạo GrantedAuthority từ role
-            String roleName = user.getRole().getName(); // USER/ADMIN
-            var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + roleName));
+            // Đồng bộ user với DB
+            User user = userRepository.findByEmail(email)
+                    .orElseGet(() -> createUserFromFirebase(
+                            decodedToken.getUid(),
+                            email,
+                            decodedToken.getName(),
+                            decodedToken.getPicture()));
 
-            var auth = new UsernamePasswordAuthenticationToken(
-                    user.getEmail(), null, authorities);
+            // Gán Authentication
+            List<GrantedAuthority> authorities = List.of(
+                    new SimpleGrantedAuthority("ROLE_" + user.getRole().getName()));
 
-            auth.setDetails(user);
+            UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(user.getEmail(), null,
+                    authorities);
 
             SecurityContextHolder.getContext().setAuthentication(auth);
+            log.info("Authenticated Firebase user: {}", email);
 
         } catch (Exception e) {
             log.warn("Invalid Firebase ID token: {}", e.getMessage());
-            // Không set auth, request sẽ bị chặn ở layer security nếu cần
+            // Không set auth, request sẽ bị chặn ở security nếu endpoint require
+            // authenticated
         }
 
         filterChain.doFilter(request, response);
