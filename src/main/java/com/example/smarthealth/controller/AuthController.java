@@ -5,8 +5,12 @@ import com.example.smarthealth.model.auth.User;
 import com.example.smarthealth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.security.core.Authentication;
+import org.springframework.http.HttpStatus;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -17,11 +21,24 @@ public class AuthController {
 
         @GetMapping("/me")
         public ResponseEntity<UserProfileDto> me() {
-                String email = (String) SecurityContextHolder.getContext()
-                                .getAuthentication().getPrincipal();
+                Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+                // Không có auth hoặc chỉ là anonymous → 401
+                if (authentication == null
+                                || !authentication.isAuthenticated()
+                                || authentication instanceof AnonymousAuthenticationToken) {
+                        throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthenticated");
+                }
+
+                Object principal = authentication.getPrincipal();
+
+                System.out.println(">>> principal class = " + principal.getClass());
+                System.out.println(">>> principal value = " + principal);
+
+                String email = (String) principal; // sau khi filter đã set principal = email
 
                 User user = userRepository.findByEmail(email)
-                                .orElseThrow(() -> new IllegalStateException("User not found in DB"));
+                                .orElseThrow(() -> new IllegalStateException("User not found in DB: " + email));
 
                 UserProfileDto dto = UserProfileDto.builder()
                                 .id(user.getId())

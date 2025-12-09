@@ -51,12 +51,12 @@ public class FirebaseAuthenticationFilter extends OncePerRequestFilter {
             String email = decodedToken.getEmail();
 
             if (email == null || email.isBlank()) {
-                logger.warn("Firebase token has no email");
+                log.warn("Firebase token has no email");
                 filterChain.doFilter(request, response);
                 return;
             }
 
-            // Đồng bộ user với DB
+            // Fetch or create user
             User user = userRepository.findByEmail(email)
                     .orElseGet(() -> createUserFromFirebase(
                             decodedToken.getUid(),
@@ -64,20 +64,22 @@ public class FirebaseAuthenticationFilter extends OncePerRequestFilter {
                             decodedToken.getName(),
                             decodedToken.getPicture()));
 
-            // Gán Authentication
+            // Gán quyền
             List<GrantedAuthority> authorities = List.of(
                     new SimpleGrantedAuthority("ROLE_" + user.getRole().getName()));
 
-            UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(user.getEmail(), null,
+            UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(email, null,
                     authorities);
 
             SecurityContextHolder.getContext().setAuthentication(auth);
             log.info("Authenticated Firebase user: {}", email);
 
+        } catch (com.google.firebase.auth.FirebaseAuthException e) {
+            // TOKEN SAI HOẶC HẾT HẠN
+            log.warn("Firebase token verification failed: {}", e.getMessage());
         } catch (Exception e) {
-            log.warn("Invalid Firebase ID token: {}", e.getMessage());
-            // Không set auth, request sẽ bị chặn ở security nếu endpoint require
-            // authenticated
+            // LỖI KHÁC (DB, ROLE, LOGIC)
+            log.error("Unexpected error in FirebaseAuthenticationFilter", e);
         }
 
         filterChain.doFilter(request, response);
