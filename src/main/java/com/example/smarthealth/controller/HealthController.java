@@ -13,7 +13,7 @@ public class HealthController {
 
     @Operation(summary = "Public health check API", description = "Không yêu cầu token. Dùng để kiểm tra backend đang hoạt động.", tags = {
             "System" }, security = {}) // không cần token
-    @GetMapping("/api/health")
+    @GetMapping("/health")
     public String healthCheck() {
         return "Smart Health Tracker Backend is running!";
     }

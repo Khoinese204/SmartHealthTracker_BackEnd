@@ -26,11 +26,15 @@ public class SecurityConfig {
                                                                 "/swagger-ui/**",
                                                                 "/v3/api-docs/**",
                                                                 "/actuator/health",
+                                                                "/health",
+                                                                "/health/**",
                                                                 "/api/public/**" // nếu có
                                                 ).permitAll()
-                                                .requestMatchers(
-                                                                "/api/auth/**" // nếu sau này có
-                                                ).permitAll()
+                                                // Auth APIs: yêu cầu login, nhưng không ràng buộc role
+                                                .requestMatchers("/api/auth/**").authenticated()
+                                                // Admin APIs
+                                                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                                                // các API khác chỉ cần login
                                                 .anyRequest().authenticated())
                                 .addFilterBefore(
                                                 firebaseAuthenticationFilter,

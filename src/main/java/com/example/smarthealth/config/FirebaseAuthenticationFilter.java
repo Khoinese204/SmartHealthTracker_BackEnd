@@ -12,12 +12,14 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -31,17 +33,38 @@ public class FirebaseAuthenticationFilter extends OncePerRequestFilter {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
 
+    // CHỈ filter các request /api/**
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getServletPath();
+        // true = KHÔNG filter
+        // -> filter chỉ chạy khi path bắt đầu bằng /api/
+        return !path.startsWith("/api/");
+    }
+
     @Override
     protected void doFilterInternal(
             HttpServletRequest request,
             HttpServletResponse response,
             FilterChain filterChain) throws ServletException, IOException {
 
+        String path = request.getServletPath();
+        // (nếu bạn vẫn muốn filter chỉ cho /api/** thì có thể giữ shouldNotFilter, khỏi
+        // check lại ở đây)
+
         String header = request.getHeader("Authorization");
 
+        // 1. Thiếu hoặc sai format header -> 401
         if (header == null || !header.startsWith("Bearer ")) {
-            filterChain.doFilter(request, response);
-            return;
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED); // 401
+            response.setContentType("application/json;charset=UTF-8");
+            response.getWriter().write("""
+                    {
+                      "status": 401,
+                      "message": "Missing or invalid Authorization header"
+                    }
+                    """);
+            return; // DỪNG ở đây, không chạy tiếp filter chain
         }
 
         String idToken = header.substring(7);
@@ -51,12 +74,19 @@ public class FirebaseAuthenticationFilter extends OncePerRequestFilter {
             String email = decodedToken.getEmail();
 
             if (email == null || email.isBlank()) {
-                log.warn("Firebase token has no email");
-                filterChain.doFilter(request, response);
+                // Token verify được nhưng không có email -> cũng coi như 401
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType("application/json;charset=UTF-8");
+                response.getWriter().write("""
+                        {
+                          "status": 401,
+                          "message": "Invalid Firebase token (no email)"
+                        }
+                        """);
                 return;
             }
 
-            // Fetch or create user
+            // 2. Tìm hoặc tạo user trong DB
             User user = userRepository.findByEmail(email)
                     .orElseGet(() -> createUserFromFirebase(
                             decodedToken.getUid(),
@@ -64,7 +94,6 @@ public class FirebaseAuthenticationFilter extends OncePerRequestFilter {
                             decodedToken.getName(),
                             decodedToken.getPicture()));
 
-            // Gán quyền
             List<GrantedAuthority> authorities = List.of(
                     new SimpleGrantedAuthority("ROLE_" + user.getRole().getName()));
 
@@ -74,19 +103,35 @@ public class FirebaseAuthenticationFilter extends OncePerRequestFilter {
             SecurityContextHolder.getContext().setAuthentication(auth);
             log.info("Authenticated Firebase user: {}", email);
 
-        } catch (com.google.firebase.auth.FirebaseAuthException e) {
-            // TOKEN SAI HOẶC HẾT HẠN
-            log.warn("Firebase token verification failed: {}", e.getMessage());
-        } catch (Exception e) {
-            // LỖI KHÁC (DB, ROLE, LOGIC)
-            log.error("Unexpected error in FirebaseAuthenticationFilter", e);
-        }
+            // 3. OK -> cho đi tiếp
+            filterChain.doFilter(request, response);
 
-        filterChain.doFilter(request, response);
+        } catch (com.google.firebase.auth.FirebaseAuthException e) {
+            // Token sai / hết hạn -> 401
+            log.warn("Firebase token verification failed: {}", e.getMessage());
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json;charset=UTF-8");
+            response.getWriter().write("""
+                    {
+                      "status": 401,
+                      "message": "Invalid or expired Firebase token"
+                    }
+                    """);
+        } catch (Exception e) {
+            // Lỗi bất ngờ khác -> 500
+            log.error("Unexpected error in FirebaseAuthenticationFilter", e);
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            response.setContentType("application/json;charset=UTF-8");
+            response.getWriter().write("""
+                    {
+                      "status": 500,
+                      "message": "Internal server error"
+                    }
+                    """);
+        }
     }
 
     private User createUserFromFirebase(String firebaseUid, String email, String name, String avatarUrl) {
-        // Lấy role USER mặc định
         Role userRole = roleRepository.findByName("USER")
                 .orElseThrow(() -> new IllegalStateException("Default role USER not found"));
 

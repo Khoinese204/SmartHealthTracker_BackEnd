@@ -1,20 +1,14 @@
 package com.example.smarthealth.service;
 
+import com.example.smarthealth.config.CurrentUserService;
 import com.example.smarthealth.dto.auth.UserProfileDto;
 import com.example.smarthealth.dto.auth.UserProfileUpdateRequest;
 import com.example.smarthealth.model.auth.User;
 import com.example.smarthealth.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-
 import java.io.IOException;
-
-import org.springframework.http.HttpStatus;
-import org.springframework.security.authentication.AnonymousAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.server.ResponseStatusException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.Files;
@@ -24,25 +18,28 @@ import java.nio.file.Files;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final CurrentUserService currentUserService;
+
+    public User getCurrentUserEntity() {
+        return currentUserService.getCurrentUser();
+    }
+
+    private UserProfileDto toDto(User user) {
+        return UserProfileDto.builder()
+                .id(user.getId())
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .avatarUrl(user.getAvatarUrl())
+                .gender(user.getGender())
+                .heightCm(user.getHeightCm())
+                .weightKg(user.getWeightKg() != null ? user.getWeightKg().doubleValue() : null)
+                .dateOfBirth(user.getDateOfBirth())
+                .role(user.getRole().getName())
+                .build();
+    }
 
     public UserProfileDto getCurrentUserProfile() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication == null
-                || !authentication.isAuthenticated()
-                || authentication instanceof AnonymousAuthenticationToken) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthenticated");
-        }
-
-        Object principal = authentication.getPrincipal();
-
-        System.out.println(">>> principal class = " + principal.getClass());
-        System.out.println(">>> principal value = " + principal);
-
-        String email = (String) principal; // đã được filter set = email
-
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalStateException("User not found in DB: " + email));
+        User user = getCurrentUserEntity();
 
         return UserProfileDto.builder()
                 .id(user.getId())
@@ -54,21 +51,6 @@ public class AuthService {
                 .weightKg(user.getWeightKg() != null ? user.getWeightKg().doubleValue() : null)
                 .role(user.getRole().getName())
                 .build();
-    }
-
-    public User getCurrentUserEntity() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-        if (authentication == null
-                || !authentication.isAuthenticated()
-                || authentication instanceof AnonymousAuthenticationToken) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthenticated");
-        }
-
-        String email = (String) authentication.getPrincipal();
-
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalStateException("User not found: " + email));
     }
 
     public UserProfileDto updateProfile(UserProfileUpdateRequest req) {
@@ -112,20 +94,6 @@ public class AuthService {
         userRepository.save(user);
 
         return toDto(user);
-    }
-
-    private UserProfileDto toDto(User user) {
-        return UserProfileDto.builder()
-                .id(user.getId())
-                .email(user.getEmail())
-                .fullName(user.getFullName())
-                .avatarUrl(user.getAvatarUrl())
-                .gender(user.getGender())
-                .heightCm(user.getHeightCm())
-                .weightKg(user.getWeightKg() != null ? user.getWeightKg().doubleValue() : null)
-                .dateOfBirth(user.getDateOfBirth())
-                .role(user.getRole().getName())
-                .build();
     }
 
 }
