@@ -1,6 +1,6 @@
 package com.example.smarthealth.service;
 
-import com.example.smarthealth.dto.dashboard.AdminDashboardResponse;
+import com.example.smarthealth.dto.dashboard.AdminDashboardDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -12,7 +12,7 @@ public class AdminDashboardService {
     // private final UserRepository userRepository;
     // private final WorkoutRepository workoutRepository;
 
-    public AdminDashboardResponse getDashboard() {
+    public AdminDashboardDto getDashboard() {
 
         // TODO: Query thật từ DB
         long totalUsers = 100;
@@ -20,7 +20,7 @@ public class AdminDashboardService {
         long totalStepsToday = 75000;
         long totalCaloriesToday = 12000;
 
-        return AdminDashboardResponse.builder()
+        return AdminDashboardDto.builder()
                 .totalUsers(totalUsers)
                 .totalWorkouts(totalWorkouts)
                 .totalStepsToday(totalStepsToday)

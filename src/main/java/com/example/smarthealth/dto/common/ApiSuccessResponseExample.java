@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Schema(description = "Standard API Response Wrapper")
-public class ApiResponse<T> {
+public class ApiSuccessResponseExample<T> {
 
     @Schema(example = "200")
     private int status = 200;

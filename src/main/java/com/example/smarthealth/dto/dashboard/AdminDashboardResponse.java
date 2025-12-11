@@ -1,13 +1,12 @@
 package com.example.smarthealth.dto.dashboard;
 
-import lombok.Builder;
-import lombok.Data;
+import com.example.smarthealth.dto.common.ApiSuccessResponseExample;
 
-@Data
-@Builder
-public class AdminDashboardResponse {
-    private long totalUsers;
-    private long totalWorkouts;
-    private long totalStepsToday;
-    private long totalCaloriesToday;
+import io.swagger.v3.oas.annotations.media.Schema;
+
+@Schema(description = "Admin dashboard API Response")
+public class AdminDashboardResponse extends ApiSuccessResponseExample<AdminDashboardDto> {
+    public AdminDashboardResponse(int status, String message, AdminDashboardDto data) {
+        super(status, message, data);
+    }
 }
