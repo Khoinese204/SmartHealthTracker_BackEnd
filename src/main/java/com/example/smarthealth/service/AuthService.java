@@ -1,5 +1,7 @@
 package com.example.smarthealth.service;
 
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
 import com.example.smarthealth.config.CurrentUserService;
 import com.example.smarthealth.dto.auth.UserProfileDto;
 import com.example.smarthealth.dto.auth.UserProfileUpdateRequest;
@@ -9,9 +11,7 @@ import lombok.RequiredArgsConstructor;
 import java.io.IOException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.Files;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -19,6 +19,7 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final CurrentUserService currentUserService;
+    private final Cloudinary cloudinary; // inject từ CloudinaryConfig
 
     public User getCurrentUserEntity() {
         return currentUserService.getCurrentUser();
@@ -80,17 +81,20 @@ public class AuthService {
             throw new IllegalArgumentException("Avatar file is empty");
         }
 
-        // Demo: save file to local folder /uploads/avatars/
-        String fileName = "avatar_" + user.getId() + "_" + System.currentTimeMillis() + ".jpg";
-        Path uploadPath = Paths.get("uploads/avatars");
-        Files.createDirectories(uploadPath);
+        // Đặt public_id để dễ quản lý (mỗi user 1 avatar)
+        String publicId = "avatars/user_" + user.getId();
 
-        Path filePath = uploadPath.resolve(fileName);
-        Files.write(filePath, file.getBytes());
+        Map uploadResult = cloudinary.uploader().upload(
+                file.getBytes(),
+                ObjectUtils.asMap(
+                        "public_id", publicId,
+                        "overwrite", true, // ghi đè avatar cũ
+                        "folder", "smarthealth" // optional: nhóm vào 1 folder
+                ));
 
-        // Set avatar URL (ở FE bạn sẽ tự map đường dẫn tĩnh)
-        user.setAvatarUrl("/static/avatars/" + fileName);
+        String secureUrl = (String) uploadResult.get("secure_url");
 
+        user.setAvatarUrl(secureUrl);
         userRepository.save(user);
 
         return toDto(user);
