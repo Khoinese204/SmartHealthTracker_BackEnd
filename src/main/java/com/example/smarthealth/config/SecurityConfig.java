@@ -39,7 +39,7 @@ public class SecurityConfig {
                                                                 "/swagger-ui/**",
                                                                 "/v3/api-docs/**",
                                                                 "/actuator/health",
-                                                                "/health",
+                                                                "/api/health/**",
                                                                 "/health/**",
                                                                 "/api/public/**")
                                                 .permitAll()
@@ -48,8 +48,7 @@ public class SecurityConfig {
                                                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
                                                 // /api/health/** → USER only
-                                                .requestMatchers("/api/health/**",
-                                                                "/api/step/**")
+                                                .requestMatchers("/api/health/**")
                                                 .hasRole("USER")
 
                                                 // /api/auth/** → USER + ADMIN (just authenticated)
