@@ -143,3 +143,93 @@ public class FirebaseAuthenticationFilter extends OncePerRequestFilter {
                 return userRepository.save(user);
         }
 }
+
+// package com.example.smarthealth.config;
+
+// import com.google.firebase.auth.FirebaseAuth;
+// import com.google.firebase.auth.FirebaseToken;
+// import jakarta.servlet.FilterChain;
+// import jakarta.servlet.ServletException;
+// import jakarta.servlet.http.HttpServletRequest;
+// import jakarta.servlet.http.HttpServletResponse;
+// import lombok.RequiredArgsConstructor;
+// import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+// import org.springframework.security.core.context.SecurityContextHolder;
+// import org.springframework.security.core.authority.SimpleGrantedAuthority;
+// import org.springframework.stereotype.Component;
+// import org.springframework.util.StringUtils;
+// import org.springframework.web.filter.OncePerRequestFilter;
+// import com.example.smarthealth.model.auth.User; // Import User entity của bạn
+// import com.example.smarthealth.repository.UserRepository; // Import Repo
+
+// import java.io.IOException;
+// import java.util.Collections;
+// import java.util.List;
+
+// @Component
+// @RequiredArgsConstructor
+// public class FirebaseAuthenticationFilter extends OncePerRequestFilter {
+
+//     private final UserRepository userRepository;
+
+//     @Override
+//     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+//             throws ServletException, IOException {
+
+//         String token = getBearerToken(request);
+
+//         // 1. QUAN TRỌNG: Nếu không có token -> Cho qua luôn (để SecurityConfig xử lý
+//         // public API)
+//         if (token == null) {
+//             filterChain.doFilter(request, response);
+//             return;
+//         }
+
+//         // 2. Nếu có token -> Xác thực với Firebase
+//         try {
+//             // Tạm thời bỏ qua verify thật nếu chưa cấu hình Firebase Key (để tránh lỗi
+//             // crash khi dev)
+//             // Khi nào có key thật thì mở comment dòng dưới ra:
+//             // FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(token);
+//             // String email = decodedToken.getEmail();
+
+//             // --- MOCK LOGIC (Để test chạy được ngay) ---
+//             // Giả sử cứ gửi token là "TEST_TOKEN" thì coi như là user ID=1
+//             // (Bạn xóa đoạn này khi deploy thật nhé)
+//             String email = "nguoidung@test.com"; // Email của user ID 1 bạn tạo trong DB
+//             // ----------------------------------------
+
+//             // Tìm user trong DB để lấy Role
+//             User user = userRepository.findByEmail(email).orElse(null);
+
+//             if (user != null) {
+//                 // Tạo Authentication object (Set quyền cho Spring Security hiểu)
+//                 // Giả sử role lưu trong DB là "USER" -> Spring cần "ROLE_USER"
+//                 // Ở đây mình hardcode tạm, bạn nên join bảng Roles để lấy name chuẩn
+//                 List<SimpleGrantedAuthority> authorities = Collections
+//                         .singletonList(new SimpleGrantedAuthority("ROLE_USER"));
+
+//                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(user, null,
+//                         authorities);
+
+//                 SecurityContextHolder.getContext().setAuthentication(authentication);
+//             }
+
+//         } catch (Exception e) {
+//             // Token sai hoặc hết hạn -> Không set Authentication -> SecurityConfig sẽ chặn
+//             // ở bước sau
+//             System.out.println("Lỗi verify token: " + e.getMessage());
+//         }
+
+//         // 3. Tiếp tục chuỗi filter
+//         filterChain.doFilter(request, response);
+//     }
+
+//     private String getBearerToken(HttpServletRequest request) {
+//         String bearerToken = request.getHeader("Authorization");
+//         if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
+//             return bearerToken.substring(7);
+//         }
+//         return null;
+//     }
+// }
