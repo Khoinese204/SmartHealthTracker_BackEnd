@@ -4,9 +4,12 @@ import com.example.smarthealth.model.health.HeartRateRecord;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
 public interface HeartRateRecordRepository extends JpaRepository<HeartRateRecord, Long> {
     List<HeartRateRecord> findByUserIdOrderByMeasuredAtDesc(Long userId);
+
+    List<HeartRateRecord> findByUserIdAndMeasuredAtBetween(Long userId, LocalDateTime start, LocalDateTime end);
 }
