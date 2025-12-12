@@ -19,10 +19,13 @@ import lombok.RequiredArgsConstructor;
 
 import java.io.IOException;
 
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.bind.annotation.RequestPart;
+
+import io.swagger.v3.oas.annotations.Parameter;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -99,17 +102,15 @@ public class AuthController {
   @Operation(summary = "Upload new avatar", description = """
       Upload avatar mới cho user.
       File phải là dạng JPEG/PNG, size < 5MB.
-      """, tags = { "Authentication" }, security = @SecurityRequirement(name = "bearerAuth"))
+      """, security = @SecurityRequirement(name = "bearerAuth"))
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "Avatar profile updated successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = UserProfileResponse.class))),
-      @ApiResponse(responseCode = "400", description = "Bad request", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class), examples = {
-          @ExampleObject(value = """
+      @ApiResponse(responseCode = "400", description = "Bad request", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class), examples = @ExampleObject("""
               {
                 "status": 400,
                 "message": "Bad request"
               }
-              """)
-      })),
+          """))),
       @ApiResponse(responseCode = "401", description = "Missing or invalid token", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class), examples = {
           @ExampleObject(value = """
               {
@@ -127,12 +128,12 @@ public class AuthController {
               """)
       }))
   })
-  @PostMapping("/me/avatar")
+  @PostMapping(value = "/me/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<ApiSuccess<UserProfileDto>> updateAvatar(
-      @RequestParam("file") MultipartFile file) throws IOException {
+      @Parameter(description = "Ảnh avatar (jpg/png)", required = true) @RequestPart("file") MultipartFile file)
+      throws IOException {
     UserProfileDto data = authService.updateAvatar(file);
     return ResponseEntity.ok(
         ApiSuccess.success("Avatar profile updated successfully", data));
   }
-
 }
