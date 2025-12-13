@@ -10,4 +10,6 @@ import java.util.List;
 @Repository
 public interface SedentaryLogRepository extends JpaRepository<SedentaryLog, Long> {
     List<SedentaryLog> findByUserIdAndStartTimeAfter(Long userId, LocalDateTime startTime);
+
+    List<SedentaryLog> findByUserIdAndStartTimeBetween(Long userId, LocalDateTime from, LocalDateTime to);
 }

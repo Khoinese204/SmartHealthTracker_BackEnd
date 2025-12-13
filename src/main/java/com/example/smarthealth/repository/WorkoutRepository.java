@@ -25,4 +25,15 @@ public interface WorkoutRepository extends JpaRepository<WorkoutSession, Long> {
                 where function('date', w.startTime) = :date
             """)
     Long countWorkoutsByDate(@Param("date") LocalDate date);
+
+    @Query("""
+                select w from WorkoutSession w
+                where w.user.id = :userId
+                  and function('date', w.startTime) between :from and :to
+                order by w.startTime asc
+            """)
+    List<WorkoutSession> findByUserIdAndStartDateBetween(
+            @Param("userId") Long userId,
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to);
 }
