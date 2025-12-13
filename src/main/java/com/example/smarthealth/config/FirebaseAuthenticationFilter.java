@@ -82,6 +82,17 @@ public class FirebaseAuthenticationFilter extends OncePerRequestFilter {
                             email,
                             decodedToken.getName(),
                             decodedToken.getPicture()));
+            if (!user.getIsActive()) {
+                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                response.setContentType("application/json;charset=UTF-8");
+                response.getWriter().write("""
+                            {
+                              "status": 403,
+                              "message": "Account has been deactivated"
+                            }
+                        """);
+                return;
+            }
 
             List<GrantedAuthority> authorities = List.of(
                     new SimpleGrantedAuthority("ROLE_" + user.getRole().getName()));
