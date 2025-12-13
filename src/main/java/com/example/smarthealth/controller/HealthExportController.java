@@ -28,7 +28,7 @@ import java.time.LocalDate;
 @RestController
 @RequiredArgsConstructor
 @Tag(name = "Export", description = "Export health data to CSV")
-public class HelathExportController {
+public class HealthExportController {
 
         private final HealthExportService healthExportService;
         private final UserRepository userRepository;
