@@ -1,5 +1,6 @@
 package com.example.smarthealth.controller;
 
+import com.example.smarthealth.dto.auth.UpdateAvatarRequest;
 import com.example.smarthealth.dto.auth.UserProfileDto;
 import com.example.smarthealth.dto.auth.UserProfileResponse;
 import com.example.smarthealth.dto.auth.UserProfileUpdateRequest;
@@ -23,7 +24,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.bind.annotation.RequestPart;
 
 import io.swagger.v3.oas.annotations.Parameter;
 
@@ -99,41 +99,21 @@ public class AuthController {
         ApiSuccess.success("User profile updated successfully", data));
   }
 
-  @Operation(summary = "Upload new avatar", description = """
-      Upload avatar mới cho user.
-      File phải là dạng JPEG/PNG, size < 5MB.
+  @PostMapping(value = "/me/avatar", consumes = MediaType.APPLICATION_JSON_VALUE)
+  @Operation(summary = "Update avatar URL", description = """
+      Frontend upload ảnh lên Cloudinary/Firebase Storage trước,
+      sau đó gọi API này để lưu avatarUrl vào DB.
       """, security = @SecurityRequirement(name = "bearerAuth"))
   @ApiResponses({
-      @ApiResponse(responseCode = "200", description = "Avatar profile updated successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = UserProfileResponse.class))),
-      @ApiResponse(responseCode = "400", description = "Bad request", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class), examples = @ExampleObject("""
-              {
-                "status": 400,
-                "message": "Bad request"
-              }
-          """))),
-      @ApiResponse(responseCode = "401", description = "Missing or invalid token", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class), examples = {
-          @ExampleObject(value = """
-              {
-                "status": 401,
-                "message": "Unauthenticated"
-              }
-              """)
-      })),
-      @ApiResponse(responseCode = "403", description = "Not enough permission", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class), examples = {
-          @ExampleObject(value = """
-              {
-                "status": 403,
-                "message": "Forbidden"
-              }
-              """)
-      }))
+      @ApiResponse(responseCode = "200", description = "Avatar updated successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = UserProfileResponse.class))),
+      @ApiResponse(responseCode = "400", description = "Bad request", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class))),
+      @ApiResponse(responseCode = "401", description = "Missing or invalid token", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class))),
+      @ApiResponse(responseCode = "403", description = "Not enough permission", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiError.class)))
   })
-  @PostMapping(value = "/me/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
   public ResponseEntity<ApiSuccess<UserProfileDto>> updateAvatar(
-      @Parameter(description = "Ảnh avatar (jpg/png)", required = true) @RequestPart("file") MultipartFile file)
-      throws IOException {
-    UserProfileDto data = authService.updateAvatar(file);
-    return ResponseEntity.ok(
-        ApiSuccess.success("Avatar profile updated successfully", data));
+      @RequestBody @jakarta.validation.Valid UpdateAvatarRequest req) {
+    UserProfileDto data = authService.updateAvatarUrl(req.getAvatarUrl());
+    return ResponseEntity.ok(ApiSuccess.success("Avatar updated successfully", data));
   }
+
 }

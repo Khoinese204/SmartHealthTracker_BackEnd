@@ -74,27 +74,20 @@ public class AuthService {
         return toDto(user);
     }
 
-    public UserProfileDto updateAvatar(MultipartFile file) throws IOException {
+    public UserProfileDto updateAvatarUrl(String avatarUrl) {
         User user = getCurrentUserEntity();
 
-        if (file.isEmpty()) {
-            throw new IllegalArgumentException("Avatar file is empty");
+        if (avatarUrl == null || avatarUrl.isBlank()) {
+            throw new IllegalArgumentException("avatarUrl is empty");
         }
 
-        // Đặt public_id để dễ quản lý (mỗi user 1 avatar)
-        String publicId = "avatars/user_" + user.getId();
+        // (optional) chỉ cho phép URL từ Cloudinary của bạn
+        // ví dụ: https://res.cloudinary.com/<cloud-name>/
+        // if (!avatarUrl.startsWith("https://res.cloudinary.com/" + cloudName + "/")) {
+        // throw new IllegalArgumentException("avatarUrl is not from allowed domain");
+        // }
 
-        Map uploadResult = cloudinary.uploader().upload(
-                file.getBytes(),
-                ObjectUtils.asMap(
-                        "public_id", publicId,
-                        "overwrite", true, // ghi đè avatar cũ
-                        "folder", "smarthealth" // optional: nhóm vào 1 folder
-                ));
-
-        String secureUrl = (String) uploadResult.get("secure_url");
-
-        user.setAvatarUrl(secureUrl);
+        user.setAvatarUrl(avatarUrl.trim());
         userRepository.save(user);
 
         return toDto(user);
