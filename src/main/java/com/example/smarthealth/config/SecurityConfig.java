@@ -42,7 +42,8 @@ public class SecurityConfig {
                                 "/actuator/health",
                                 "/api/health/**",
                                 "/health/**",
-                                "/api/public/**")
+                                "/api/public/**",
+                                "/api/stats/**")
                         .permitAll()
 
                         // /api/admin/** → ADMIN only
