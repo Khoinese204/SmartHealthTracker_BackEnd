@@ -39,10 +39,12 @@ public class SecurityConfig {
                                                                 "/swagger-ui/**",
                                                                 "/v3/api-docs/**",
                                                                 "/actuator/health",
-                                                                "/api/health/**",
-                                                                "/health/**",
-                                                                "/api/public/**")
+                                                                "/api/public/**",
+                                                                "/api/gamification/leaderboards/**")
                                                 .permitAll()
+
+                                                // /api/gamification/** → USER or ADMIN
+                                                .requestMatchers("/api/gamification/**").hasAnyRole("USER", "ADMIN")
 
                                                 // /api/admin/** → ADMIN only
                                                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
@@ -51,7 +53,7 @@ public class SecurityConfig {
                                                 .requestMatchers("/api/health/**")
                                                 .hasRole("USER")
 
-                                                // /api/auth/** → USER + ADMIN (just authenticated)
+                                                // /api/auth/** (just authenticated)
                                                 .requestMatchers("/api/auth/**").authenticated()
 
                                                 // Remaining APIs → require login
