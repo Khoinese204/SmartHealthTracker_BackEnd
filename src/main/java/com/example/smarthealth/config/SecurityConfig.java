@@ -36,10 +36,13 @@ public class SecurityConfig {
 
                                                 // PUBLIC → No token needed
                                                 .requestMatchers(
+                                                                "/swagger-ui.html",
                                                                 "/swagger-ui/**",
                                                                 "/v3/api-docs/**",
                                                                 "/actuator/health",
+                                                                "/api/health/**",
                                                                 "/api/public/**",
+                                                                "/api/stats/**",
                                                                 "/api/gamification/leaderboards/**")
                                                 .permitAll()
 
@@ -48,10 +51,6 @@ public class SecurityConfig {
 
                                                 // /api/admin/** → ADMIN only
                                                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
-
-                                                // /api/health/** → USER only
-                                                .requestMatchers("/api/health/**")
-                                                .hasRole("USER")
 
                                                 // /api/auth/** (just authenticated)
                                                 .requestMatchers("/api/auth/**").authenticated()
