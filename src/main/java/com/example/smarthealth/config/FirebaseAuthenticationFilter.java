@@ -51,12 +51,9 @@ public class FirebaseAuthenticationFilter extends OncePerRequestFilter {
 
         String header = request.getHeader("Authorization");
 
-        // 1. Thiếu hoặc sai format header -> 401
         if (header == null || !header.startsWith("Bearer ")) {
-            writeError(response,
-                    HttpStatus.UNAUTHORIZED.value(),
-                    "Missing or invalid Authorization header",
-                    null);
+            // Không có token -> để SecurityConfig quyết định endpoint có cần auth hay không
+            filterChain.doFilter(request, response);
             return;
         }
 
@@ -64,6 +61,11 @@ public class FirebaseAuthenticationFilter extends OncePerRequestFilter {
 
         try {
             FirebaseToken decodedToken = FirebaseAuth.getInstance().verifyIdToken(idToken);
+
+            log.info("TOKEN email={}, uid={}, name={}",
+                    decodedToken.getEmail(),
+                    decodedToken.getUid(),
+                    decodedToken.getName());
             String email = decodedToken.getEmail();
 
             if (email == null || email.isBlank()) {
