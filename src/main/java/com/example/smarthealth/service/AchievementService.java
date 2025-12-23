@@ -8,7 +8,7 @@ import java.util.*;
 import org.springframework.stereotype.Service;
 
 import com.example.smarthealth.dto.gamification.UnlockedAchievementDto;
-import com.example.smarthealth.model.achievement.AchievementRuleType;
+import com.example.smarthealth.enums.AchievementRuleType;
 import com.example.smarthealth.model.gamification.AchievementDefinition;
 import com.example.smarthealth.model.gamification.UserAchievement;
 import com.example.smarthealth.model.health.StepDaily;

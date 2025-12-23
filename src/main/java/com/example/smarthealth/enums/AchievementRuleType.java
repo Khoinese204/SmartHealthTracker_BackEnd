@@ -1,4 +1,4 @@
-package com.example.smarthealth.model.achievement;
+package com.example.smarthealth.enums;
 
 public enum AchievementRuleType {
     STEPS_DAILY_MINIMUM,
