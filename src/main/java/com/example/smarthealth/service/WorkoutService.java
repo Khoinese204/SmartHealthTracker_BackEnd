@@ -68,4 +68,19 @@ public class WorkoutService {
 
         return sessionRepository.findAllByUserIdAndStartTimeBetweenOrderByStartTimeDesc(userId, start, end);
     }
+
+    // ... code cũ ...
+
+    public WorkoutSession getWorkoutById(Long id) {
+        WorkoutSession session = sessionRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Workout not found"));
+
+        Long currentUserId = currentUserService.getCurrentUser().getId();
+        
+        if (!session.getUser().getId().equals(currentUserId)) {
+            throw new RuntimeException("Access denied: You do not own this workout");
+        }
+
+        return session;
+    }
 }

@@ -22,7 +22,7 @@ public class WorkoutController {
     @PostMapping
     public ResponseEntity<WorkoutSession> saveWorkout(
             @RequestBody WorkoutRequest request) {
-        
+
         WorkoutSession savedSession = workoutService.saveWorkout(request);
         return ResponseEntity.ok(savedSession);
     }
@@ -31,7 +31,12 @@ public class WorkoutController {
     public ResponseEntity<List<WorkoutSession>> getWorkoutHistory(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
-        
+
         return ResponseEntity.ok(workoutService.getWorkoutHistory(fromDate, toDate));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<WorkoutSession> getWorkoutById(@PathVariable Long id) {
+        return ResponseEntity.ok(workoutService.getWorkoutById(id));
     }
 }
