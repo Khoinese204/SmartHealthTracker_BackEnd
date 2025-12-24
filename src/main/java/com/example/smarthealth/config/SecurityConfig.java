@@ -43,6 +43,7 @@ public class SecurityConfig {
                                                                 "/api/health/**",
                                                                 "/api/public/**",
                                                                 "/api/stats/**",
+                                                                "/api/social/**",
                                                                 "/api/gamification/leaderboards/**")
                                                 .permitAll()
 

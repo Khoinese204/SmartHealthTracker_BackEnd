@@ -2,6 +2,7 @@ package com.example.smarthealth.service;
 
 import com.example.smarthealth.config.CurrentUserService;
 import com.example.smarthealth.dto.social.FeedDtos;
+import com.example.smarthealth.dto.social.UserSummaryDto;
 import com.example.smarthealth.enums.PostVisibility;
 import com.example.smarthealth.model.auth.User;
 import com.example.smarthealth.model.social.*;
@@ -44,6 +45,11 @@ public class FeedService {
             throw new IllegalArgumentException("groupId is required when visibility=GROUP");
         }
 
+        UserSummaryDto meSummary = new UserSummaryDto(
+                me.getId(),
+                me.getFullName(),
+                me.getAvatarUrl());
+
         Post saved = postRepository.save(Post.builder()
                 .userId(me.getId())
                 .content(req.getContent())
@@ -55,7 +61,7 @@ public class FeedService {
 
         return FeedDtos.FeedItemResponse.builder()
                 .id(saved.getId())
-                .userId(saved.getUserId())
+                .user(meSummary)
                 .content(saved.getContent())
                 .imageUrl(saved.getImageUrl())
                 .achievementUserId(saved.getAchievementUserId())
@@ -132,10 +138,15 @@ public class FeedService {
 
         Post saved = postRepository.save(post);
 
+        UserSummaryDto meSummary = new UserSummaryDto(
+                me.getId(),
+                me.getFullName(),
+                me.getAvatarUrl());
+
         // Trả về response giống feed item
         return FeedDtos.FeedItemResponse.builder()
                 .id(saved.getId())
-                .userId(saved.getUserId())
+                .user(meSummary)
                 .content(saved.getContent())
                 .imageUrl(saved.getImageUrl())
                 .achievementUserId(saved.getAchievementUserId())
@@ -172,32 +183,37 @@ public class FeedService {
         User me = currentUserService.getCurrentUser();
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        // 1) lấy danh sách groupId mà mình là member
         List<Long> myGroupIds = groupMemberRepository.findGroupIdsByUserId(me.getId());
 
-        // 2) query feed theo quyền xem
         Page<Post> posts = (myGroupIds == null || myGroupIds.isEmpty())
-                ? postRepository.findVisibleFeedNoGroups(me.getId(), PostVisibility.PUBLIC, PostVisibility.PRIVATE,
+                ? postRepository.findVisibleFeedNoGroups(
+                        me.getId(),
+                        PostVisibility.PUBLIC,
+                        PostVisibility.PRIVATE,
                         pageable)
-                : postRepository.findVisibleFeed(me.getId(), myGroupIds,
-                        PostVisibility.PUBLIC, PostVisibility.PRIVATE, PostVisibility.GROUP, pageable);
+                : postRepository.findVisibleFeed(
+                        me.getId(),
+                        myGroupIds,
+                        PostVisibility.PUBLIC,
+                        PostVisibility.PRIVATE,
+                        PostVisibility.GROUP,
+                        pageable);
 
-        List<Long> postIds = posts.getContent().stream().map(Post::getId).toList();
-        if (postIds.isEmpty()) {
-            return posts.map(p -> FeedDtos.FeedItemResponse.builder()
-                    .id(p.getId())
-                    .userId(p.getUserId())
-                    .content(p.getContent())
-                    .imageUrl(p.getImageUrl())
-                    .achievementUserId(p.getAchievementUserId())
-                    .createdAt(p.getCreatedAt())
-                    .visibility(p.getVisibility())
-                    .likeCount(0)
-                    .commentCount(0)
-                    .likedByMe(false)
-                    .isShare(false)
-                    .build());
-        }
+        if (posts.isEmpty())
+            return posts.map(p -> FeedDtos.FeedItemResponse.builder().build());
+
+        List<Post> postList = posts.getContent();
+
+        List<Long> postIds = postList.stream().map(Post::getId).toList();
+        List<Long> userIds = postList.stream().map(Post::getUserId).distinct().toList();
+
+        Map<Long, UserSummaryDto> userMap = userRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(
+                        User::getId,
+                        u -> new UserSummaryDto(
+                                u.getId(),
+                                u.getFullName(),
+                                u.getAvatarUrl())));
 
         Map<Long, Long> likeCounts = toCountMap(postLikeRepository.countLikesByPostIds(postIds));
         Map<Long, Long> commentCounts = toCountMap(postCommentRepository.countCommentsByPostIds(postIds));
@@ -205,7 +221,7 @@ public class FeedService {
 
         return posts.map(p -> FeedDtos.FeedItemResponse.builder()
                 .id(p.getId())
-                .userId(p.getUserId())
+                .user(userMap.get(p.getUserId())) // ✅ UserSummaryDto
                 .content(p.getContent())
                 .imageUrl(p.getImageUrl())
                 .achievementUserId(p.getAchievementUserId())
@@ -226,10 +242,9 @@ public class FeedService {
 
         if (postLikeRepository.existsByPostIdAndUserId(postId, me.getId()))
             return;
-
         postLikeRepository.save(PostLike.builder()
                 .postId(postId)
-                .userId(me.getId())
+                .userId(me.getId()) // ✅ ĐÚNG
                 .build());
     }
 
@@ -247,6 +262,8 @@ public class FeedService {
         if (!postRepository.existsById(postId))
             throw new EntityNotFoundException("Post not found");
 
+        UserSummaryDto meSummary = new UserSummaryDto(me.getId(), me.getFullName(), me.getAvatarUrl());
+
         PostComment saved = postCommentRepository.save(PostComment.builder()
                 .postId(postId)
                 .userId(me.getId())
@@ -256,7 +273,7 @@ public class FeedService {
         return FeedDtos.CommentResponse.builder()
                 .id(saved.getId())
                 .postId(saved.getPostId())
-                .userId(saved.getUserId())
+                .user(meSummary)
                 .content(saved.getContent())
                 .createdAt(saved.getCreatedAt())
                 .build();
@@ -268,14 +285,25 @@ public class FeedService {
             throw new EntityNotFoundException("Post not found");
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        return postCommentRepository.findByPostIdOrderByCreatedAtDesc(postId, pageable)
-                .map(c -> FeedDtos.CommentResponse.builder()
-                        .id(c.getId())
-                        .postId(c.getPostId())
-                        .userId(c.getUserId())
-                        .content(c.getContent())
-                        .createdAt(c.getCreatedAt())
-                        .build());
+        Page<PostComment> commentPage = postCommentRepository.findByPostIdOrderByCreatedAtDesc(postId, pageable);
+
+        List<Long> userIds = commentPage.getContent().stream()
+                .map(PostComment::getUserId)
+                .distinct()
+                .toList();
+
+        Map<Long, UserSummaryDto> userMap = userRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(
+                        User::getId,
+                        u -> new UserSummaryDto(u.getId(), u.getFullName(), u.getAvatarUrl())));
+
+        return commentPage.map(c -> FeedDtos.CommentResponse.builder()
+                .id(c.getId())
+                .postId(c.getPostId())
+                .user(userMap.get(c.getUserId())) // ✅
+                .content(c.getContent())
+                .createdAt(c.getCreatedAt())
+                .build());
     }
 
     private Map<Long, Long> toCountMap(List<Object[]> rows) {
@@ -284,11 +312,12 @@ public class FeedService {
                 r -> (Long) r[1]));
     }
 
+    @Transactional
     public FeedDtos.ShareResponse sharePost(Long postId, FeedDtos.SharePostRequest req) {
         Post original = postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("Post not found: " + postId));
 
-        var me = currentUserService.getCurrentUser(); // lấy từ DB theo email principal
+        User me = currentUserService.getCurrentUser();
         PostVisibility visibility = parseVisibility(req.getVisibility());
 
         if (visibility == PostVisibility.GROUP && req.getGroupId() == null) {
@@ -305,57 +334,67 @@ public class FeedService {
 
         share = postShareRepository.save(share);
 
-        return toShareResponse(share, original, me);
+        User originalAuthor = userRepository.findById(original.getUserId()).orElse(null);
+
+        return toShareResponse(share, original, me, originalAuthor); // ✅ đủ 4 params
     }
 
+    @Transactional(readOnly = true)
     public Page<FeedDtos.ShareResponse> getShares(Long postId, int page, int size) {
 
         Page<PostShare> shares = postShareRepository.findByOriginalPostIdOrderByCreatedAtDesc(
                 postId,
-                PageRequest.of(page, size));
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
 
         return shares.map(s -> {
-            User u = userRepository.findById(s.getSharedByUserId()).orElse(null);
+            User sharedBy = userRepository.findById(s.getSharedByUserId()).orElse(null);
             Post original = postRepository.findById(s.getOriginalPostId()).orElse(null);
-            return toShareResponse(s, original, u);
+
+            User originalAuthor = (original == null)
+                    ? null
+                    : userRepository.findById(original.getUserId()).orElse(null);
+
+            return toShareResponse(s, original, sharedBy, originalAuthor); // ✅ đủ 4 params
         });
     }
 
-    private FeedDtos.UserSummaryDto toUserSummary(User u) {
+    private UserSummaryDto toUserSummary(User u) {
         if (u == null)
             return null;
-        return FeedDtos.UserSummaryDto.builder()
-                .id(u.getId())
-                .fullName(u.getFullName())
-                .avatarUrl(u.getAvatarUrl())
-                .build();
+
+        return new UserSummaryDto(
+                u.getId(),
+                u.getFullName(),
+                u.getAvatarUrl());
     }
 
-    private FeedDtos.FeedItemResponse toFeedItem(Post p) {
+    private FeedDtos.FeedItemResponse toFeedItem(Post p, User user) {
         if (p == null)
             return null;
 
         return FeedDtos.FeedItemResponse.builder()
                 .id(p.getId())
-                .userId(p.getUserId())
+                .user(toUserSummary(user)) // ✅
                 .content(p.getContent())
                 .imageUrl(p.getImageUrl())
                 .achievementUserId(p.getAchievementUserId())
                 .createdAt(p.getCreatedAt())
-
                 .likeCount(0)
                 .commentCount(0)
                 .likedByMe(false)
-
                 .isShare(false)
-                .visibility(p.getVisibility() == null ? PostVisibility.PUBLIC : p.getVisibility())
+                .visibility(p.getVisibility() == null
+                        ? PostVisibility.PUBLIC
+                        : p.getVisibility())
                 .build();
     }
 
     private FeedDtos.ShareResponse toShareResponse(
             PostShare s,
             Post originalPost,
-            User sharedBy) {
+            User sharedBy,
+            User originalAuthor // 👈 thêm user của post gốc
+    ) {
         return FeedDtos.ShareResponse.builder()
                 .shareId(s.getId())
                 .visibility(s.getVisibility() == null ? PostVisibility.PUBLIC : s.getVisibility())
@@ -363,7 +402,7 @@ public class FeedService {
                 .message(s.getMessage())
                 .createdAt(s.getCreatedAt())
                 .sharedBy(toUserSummary(sharedBy))
-                .originalPost(toFeedItem(originalPost))
+                .originalPost(toFeedItem(originalPost, originalAuthor)) // ✅
                 .build();
     }
 
@@ -371,32 +410,36 @@ public class FeedService {
         return (v == null) ? PostVisibility.PUBLIC : v;
     }
 
+    @Transactional(readOnly = true)
     public Page<FeedDtos.LikeUserResponse> getPostLikes(Long postId, int page, int size) {
-        // validate post tồn tại (để trả lỗi rõ ràng)
         postRepository.findById(postId)
                 .orElseThrow(() -> new IllegalArgumentException("Post not found: " + postId));
 
         Page<PostLike> likesPage = postLikeRepository.findByPostIdOrderByCreatedAtDesc(
-                postId, PageRequest.of(page, size));
+                postId,
+                PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
 
-        // gom userId để query users 1 lần
+        if (likesPage.isEmpty()) {
+            return likesPage.map(l -> FeedDtos.LikeUserResponse.builder().build());
+        }
+
         List<Long> userIds = likesPage.getContent().stream()
                 .map(PostLike::getUserId)
                 .distinct()
                 .toList();
 
-        Map<Long, User> userMap = userRepository.findAllById(userIds).stream()
-                .collect(Collectors.toMap(User::getId, Function.identity()));
+        Map<Long, UserSummaryDto> userMap = userRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(
+                        User::getId,
+                        u -> new UserSummaryDto(
+                                u.getId(),
+                                u.getFullName(),
+                                u.getAvatarUrl())));
 
-        return likesPage.map(like -> {
-            User u = userMap.get(like.getUserId());
-            return FeedDtos.LikeUserResponse.builder()
-                    .userId(like.getUserId())
-                    .fullName(u == null ? null : u.getFullName())
-                    .avatarUrl(u == null ? null : u.getAvatarUrl())
-                    .likedAt(like.getCreatedAt())
-                    .build();
-        });
+        return likesPage.map(like -> FeedDtos.LikeUserResponse.builder()
+                .user(userMap.get(like.getUserId())) // ✅ trả thẳng UserSummaryDto
+                .likedAt(like.getCreatedAt())
+                .build());
     }
 
 }

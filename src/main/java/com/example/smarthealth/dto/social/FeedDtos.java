@@ -13,7 +13,7 @@ public class FeedDtos {
     @Builder
     @Getter
     public static class LikeUserResponse {
-        private Long userId;
+        private UserSummaryDto user;
         private String fullName;
         private String avatarUrl;
         private Instant likedAt;
@@ -41,10 +41,10 @@ public class FeedDtos {
     @Getter
     @Setter
     public static class UpdatePostRequest {
-        private String content;          // optional
-        private String imageUrl;         // optional
+        private String content; // optional
+        private String imageUrl; // optional
         private PostVisibility visibility; // optional
-        private Long groupId;            // required if visibility=GROUP
+        private Long groupId; // required if visibility=GROUP
     }
 
     @Getter
@@ -56,17 +56,9 @@ public class FeedDtos {
 
     @Builder
     @Getter
-    public static class UserSummaryDto {
-        private Long id;
-        private String fullName;
-        private String avatarUrl;
-    }
-
-    @Builder
-    @Getter
     public static class FeedItemResponse {
         private Long id;
-        private Long userId;
+        private UserSummaryDto user;
         private String content;
         private String imageUrl;
         private Long achievementUserId;
@@ -98,7 +90,7 @@ public class FeedDtos {
     public static class CommentResponse {
         private Long id;
         private Long postId;
-        private Long userId;
+        private UserSummaryDto user;
         private String content;
         private Instant createdAt;
     }
