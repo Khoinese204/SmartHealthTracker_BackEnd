@@ -4,6 +4,11 @@ import com.example.smarthealth.dto.health.SleepRequest;
 import com.example.smarthealth.model.health.SleepSession;
 import com.example.smarthealth.service.SleepService;
 import lombok.RequiredArgsConstructor;
+
+import java.time.LocalDate;
+import java.util.List;
+
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,8 +21,15 @@ public class SleepController {
 
     @PostMapping
     public ResponseEntity<SleepSession> logSleep(
-            @RequestParam Long userId,
             @RequestBody SleepRequest request) {
-        return ResponseEntity.ok(sleepService.logSleepSession(userId, request));
+        return ResponseEntity.ok(sleepService.logSleepSession(request));
+    }
+
+    @GetMapping("/history")
+    public ResponseEntity<List<SleepSession>> getSleepHistory(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+
+        return ResponseEntity.ok(sleepService.getSleepHistory(fromDate, toDate));
     }
 }

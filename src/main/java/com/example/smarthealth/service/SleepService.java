@@ -1,5 +1,6 @@
 package com.example.smarthealth.service;
 
+import com.example.smarthealth.config.CurrentUserService;
 import com.example.smarthealth.dto.health.SleepRequest;
 import com.example.smarthealth.model.auth.User;
 import com.example.smarthealth.model.health.SleepSession;
@@ -10,18 +11,21 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class SleepService {
 
     private final SleepSessionRepository sleepRepository;
-    private final UserRepository userRepository;
+    private final CurrentUserService currentUserService;
 
     @Transactional
-    public SleepSession logSleepSession(Long userId, SleepRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    public SleepSession logSleepSession(SleepRequest request) {
+        User user = currentUserService.getCurrentUser();
 
         if (request.getStartTime() == null || request.getEndTime() == null) {
             throw new IllegalArgumentException("Start time and End time must not be null");
@@ -31,9 +35,12 @@ public class SleepService {
 
         String quality = request.getQualityLevel();
         if (quality == null) {
-            if (minutes >= 420) quality = "HIGH";
-            else if (minutes >= 300) quality = "MEDIUM";
-            else quality = "LOW";
+            if (minutes >= 420)
+                quality = "HIGH";
+            else if (minutes >= 300)
+                quality = "MEDIUM";
+            else
+                quality = "LOW";
         }
 
         SleepSession session = SleepSession.builder()
@@ -45,5 +52,14 @@ public class SleepService {
                 .build();
 
         return sleepRepository.save(session);
+    }
+
+    public List<SleepSession> getSleepHistory(LocalDate fromDate, LocalDate toDate) {
+        Long userId = currentUserService.getCurrentUser().getId();
+
+        LocalDateTime start = fromDate.atStartOfDay();
+        LocalDateTime end = toDate.atTime(LocalTime.MAX);
+
+        return sleepRepository.findAllByUserIdAndStartTimeBetweenOrderByStartTimeDesc(userId, start, end);
     }
 }

@@ -1,6 +1,8 @@
 package com.example.smarthealth.service;
 
+import com.example.smarthealth.config.CurrentUserService;
 import com.example.smarthealth.dto.health.DailySummaryDto;
+import com.example.smarthealth.model.auth.User;
 import com.example.smarthealth.model.health.HeartRateRecord;
 import com.example.smarthealth.model.health.SleepSession;
 import com.example.smarthealth.model.health.StepDaily;
@@ -23,8 +25,12 @@ public class HealthSummaryService {
     private final SleepSessionRepository sleepRepository;
     private final WorkoutSessionRepository workoutRepository;
     private final HeartRateRecordRepository heartRateRepository;
+    private final CurrentUserService currentUserService;
 
-    public DailySummaryDto getDailySummary(Long userId, LocalDate date) {
+    public DailySummaryDto getDailySummary(LocalDate date) {
+        User user = currentUserService.getCurrentUser();
+        Long userId = user.getId();
+
         LocalDateTime startOfDay = date.atStartOfDay();
         LocalDateTime endOfDay = date.atTime(LocalTime.MAX);
 
@@ -40,9 +46,10 @@ public class HealthSummaryService {
         int workoutDuration = workouts.stream().mapToInt(w -> w.getDurationSeconds() / 60).sum();
         int workoutCalories = workouts.stream().mapToInt(w -> w.getCalories() != null ? w.getCalories() : 0).sum();
 
-        List<HeartRateRecord> heartRates = heartRateRepository.findByUserIdAndMeasuredAtBetween(userId, startOfDay, endOfDay);
+        List<HeartRateRecord> heartRates = heartRateRepository.findByUserIdAndMeasuredAtBetween(userId, startOfDay,
+                endOfDay);
         IntSummaryStatistics hrStats = heartRates.stream().mapToInt(HeartRateRecord::getBpm).summaryStatistics();
-        
+
         double stepCalories = steps * 0.04;
         double totalCalories = stepCalories + workoutCalories;
         double distanceKm = steps * 0.00076;
@@ -68,12 +75,15 @@ public class HealthSummaryService {
     private int calculateHealthScore(int steps, int sleepMinutes, int workoutCount) {
         int score = 0;
         score += Math.min(50, (steps / 10000.0) * 50);
-        
-        if (sleepMinutes >= 420 && sleepMinutes <= 540) score += 30;
-        else if (sleepMinutes > 0) score += 15;
 
-        if (workoutCount > 0) score += 20;
+        if (sleepMinutes >= 420 && sleepMinutes <= 540)
+            score += 30;
+        else if (sleepMinutes > 0)
+            score += 15;
 
-        return score;
+        if (workoutCount > 0)
+            score += 20;
+
+        return Math.min(100, score);
     }
 }

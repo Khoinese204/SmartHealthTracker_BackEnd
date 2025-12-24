@@ -12,6 +12,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -21,7 +24,6 @@ import java.util.stream.Collectors;
 public class WorkoutService {
 
     private final WorkoutSessionRepository sessionRepository;
-    private final UserRepository userRepository;
     private final CurrentUserService currentUserService;
 
     @Transactional
@@ -56,5 +58,29 @@ public class WorkoutService {
         }
 
         return sessionRepository.save(session);
+    }
+
+    public List<WorkoutSession> getWorkoutHistory(LocalDate fromDate, LocalDate toDate) {
+        Long userId = currentUserService.getCurrentUser().getId();
+
+        LocalDateTime start = fromDate.atStartOfDay(); 
+        LocalDateTime end = toDate.atTime(LocalTime.MAX);
+
+        return sessionRepository.findAllByUserIdAndStartTimeBetweenOrderByStartTimeDesc(userId, start, end);
+    }
+
+    // ... code cũ ...
+
+    public WorkoutSession getWorkoutById(Long id) {
+        WorkoutSession session = sessionRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Workout not found"));
+
+        Long currentUserId = currentUserService.getCurrentUser().getId();
+        
+        if (!session.getUser().getId().equals(currentUserId)) {
+            throw new RuntimeException("Access denied: You do not own this workout");
+        }
+
+        return session;
     }
 }

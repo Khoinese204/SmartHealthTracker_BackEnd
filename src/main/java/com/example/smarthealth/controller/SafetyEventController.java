@@ -18,15 +18,13 @@ public class SafetyEventController {
 
     @PostMapping("/fall")
     public ResponseEntity<FallEvent> logFallEvent(
-            @RequestParam Long userId,
             @RequestBody FallEventRequest request) {
-        return ResponseEntity.ok(safetyService.logFallEvent(userId, request));
+        return ResponseEntity.ok(safetyService.logFallEvent(request));
     }
 
     @PostMapping("/sos")
     public ResponseEntity<SosEvent> triggerSos(
-            @RequestParam Long userId,
             @RequestBody SosRequest request) {
-        return ResponseEntity.ok(safetyService.triggerSos(userId, request));
+        return ResponseEntity.ok(safetyService.triggerSos(request));
     }
 }
