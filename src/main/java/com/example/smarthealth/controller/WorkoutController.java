@@ -16,10 +16,9 @@ public class WorkoutController {
 
     @PostMapping
     public ResponseEntity<WorkoutSession> saveWorkout(
-            @RequestParam Long userId,
             @RequestBody WorkoutRequest request) {
         
-        WorkoutSession savedSession = workoutService.saveWorkout(userId, request);
+        WorkoutSession savedSession = workoutService.saveWorkout(request);
         return ResponseEntity.ok(savedSession);
     }
 }

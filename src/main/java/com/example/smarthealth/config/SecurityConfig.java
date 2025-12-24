@@ -53,6 +53,12 @@ public class SecurityConfig {
                                                 // /api/admin/** → ADMIN only
                                                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
+                                                // /api/admin/** → USER only
+                                                .requestMatchers(
+                                                                "/api/health/workouts"
+                                                // add more user-only endpoints if needed
+                                                ).hasRole("USER")
+
                                                 // /api/auth/** (just authenticated)
                                                 .requestMatchers("/api/auth/**").authenticated()
 
