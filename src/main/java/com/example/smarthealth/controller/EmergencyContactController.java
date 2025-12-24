@@ -18,16 +18,14 @@ public class EmergencyContactController {
 
     @PostMapping
     public ResponseEntity<EmergencyContact> addContact(
-            @RequestParam Long userId,
             @RequestBody EmergencyContactRequest request) {
-        return ResponseEntity.ok(safetyService.addContact(userId, request));
+        return ResponseEntity.ok(safetyService.addContact(request));
     }
 
     @GetMapping
-    public ResponseEntity<List<EmergencyContact>> getContacts(@RequestParam Long userId) {
-        return ResponseEntity.ok(safetyService.getContacts(userId));
+    public ResponseEntity<List<EmergencyContact>> getContacts() {
+        return ResponseEntity.ok(safetyService.getContacts());
     }
-
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteContact(@PathVariable Long id) {

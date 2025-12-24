@@ -1,5 +1,6 @@
 package com.example.smarthealth.service;
 
+import com.example.smarthealth.config.CurrentUserService;
 import com.example.smarthealth.dto.health.WorkoutRequest;
 import com.example.smarthealth.enums.WorkoutType; // Import Enum của bạn
 import com.example.smarthealth.model.auth.User;
@@ -11,6 +12,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -20,12 +24,11 @@ import java.util.stream.Collectors;
 public class WorkoutService {
 
     private final WorkoutSessionRepository sessionRepository;
-    private final UserRepository userRepository;
+    private final CurrentUserService currentUserService;
 
     @Transactional
-    public WorkoutSession saveWorkout(Long userId, WorkoutRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+    public WorkoutSession saveWorkout(WorkoutRequest request) {
+        User user = currentUserService.getCurrentUser();
 
         WorkoutSession session = WorkoutSession.builder()
                 .user(user)
@@ -40,16 +43,14 @@ public class WorkoutService {
                 .build();
 
         if (request.getGpsPoints() != null && !request.getGpsPoints().isEmpty()) {
-            List<WorkoutGpsPoint> points = request.getGpsPoints().stream().map(dto -> 
-                WorkoutGpsPoint.builder()
+            List<WorkoutGpsPoint> points = request.getGpsPoints().stream().map(dto -> WorkoutGpsPoint.builder()
                     .workoutSession(session)
                     .sequenceIndex(dto.getSequenceIndex())
                     .latitude(dto.getLatitude())
                     .longitude(dto.getLongitude())
                     .altitude(dto.getAltitude())
                     .timestamp(dto.getTimestamp())
-                    .build()
-            ).collect(Collectors.toList());
+                    .build()).collect(Collectors.toList());
 
             session.setGpsPoints(points);
         } else {
@@ -57,5 +58,14 @@ public class WorkoutService {
         }
 
         return sessionRepository.save(session);
+    }
+
+    public List<WorkoutSession> getWorkoutHistory(LocalDate fromDate, LocalDate toDate) {
+        Long userId = currentUserService.getCurrentUser().getId();
+
+        LocalDateTime start = fromDate.atStartOfDay(); 
+        LocalDateTime end = toDate.atTime(LocalTime.MAX);
+
+        return sessionRepository.findAllByUserIdAndStartTimeBetweenOrderByStartTimeDesc(userId, start, end);
     }
 }

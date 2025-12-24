@@ -1,67 +1,123 @@
 # Smart Health Tracker – Backend
 
-Backend REST API cho ứng dụng **Smart Health Tracker** – một mobile app theo dõi sức khỏe sử dụng cảm biến trên điện thoại (nhịp tim, bước chân, giấc ngủ, GPS,…).  
-Hệ thống được xây dựng bằng **Spring Boot**, cung cấp các API để lưu trữ, xử lý và đồng bộ dữ liệu sức khỏe từ mobile.
+A RESTful backend API for **Smart Health Tracker**, a mobile application designed to
+collect, store, and process health-related data from smartphones
+(heart rate, step count, sleep tracking, GPS location, etc.).
 
-## 1. Công nghệ sử dụng
+The system is built with **Spring Boot** following clean architecture principles,
+optimized for mobile clients (React Native / Expo),
+with a strong focus on security, scalability, and cloud deployment readiness.
 
-- Spring Boot 3.x
-- Java 21
+---
+
+## 🚀 Key Features
+
+- User authentication using **custom JWT-based security**
+- Health data management and time-series storage
+- RESTful API design optimized for mobile applications
+- Clear separation of layers: Controller – Service – Repository
+- Database schema versioning with **Flyway**
+- Integration with **Firebase Admin SDK**
+- Image upload and management via **Cloudinary**
+- Interactive API documentation with **Swagger / OpenAPI**
+- Docker-ready for cloud deployment
+
+---
+
+## 🛠 Technology Stack
+
+- **Java 21**
+- **Spring Boot 3**
 - Spring Web
 - Spring Data JPA (Hibernate)
+- Spring Security (JWT – custom implementation)
 - PostgreSQL
-- Spring Security (JWT custom)
+- Flyway Migration
+- Firebase Admin SDK
+- Cloudinary
 - Lombok
-- Validation
+- Bean Validation
 - Springdoc OpenAPI (Swagger)
+- Docker
 
-## 2. Cấu trúc hệ thống
+---
+
+## 📂 Project Structure
 
 ```
-com.example.smarthealth.backend
- ├── config
- ├── auth
- ├── health
- └── common
+src/main/java/com/example/smarthealth
+├── controller     # REST API controllers
+├── dto            # Request / Response DTOs
+├── enums          # Enum definitions
+├── model          # JPA entities
+├── repository     # Data access layer
+├── service        # Business logic
+├── util           # Utility / helper classes
+└── SmarthealthApplication.java
 ```
 
-## 3. Cài đặt & chạy dự án
+```
+src/main/resources
+├── db/migration   # Flyway migration scripts
+├── static
+├── templates
+└── application.yml
+```
 
-### Yêu cầu
+---
+
+## ▶️ Run Locally
+
+### Prerequisites
 
 - JDK 21
 - PostgreSQL
 - Maven
-- VSCode
 
-### Bước 1 – Clone
+### Clone the repository
 
-```
+```bash
 git clone https://github.com/Khoinese204/SmartHealthTracker_BackEnd.git
-
+cd SmartHealthTracker_BackEnd
 ```
 
-### Bước 2 – Cấu hình database (`application.yml`)
+## ⚙️ Configuration
 
-```yaml
-spring:
-  datasource:
-    url: jdbc:postgresql://localhost:5432/smarthealth
-    username: postgres
-    password: 123456
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: true
+The application is fully configured via **environment variables**,
+making it suitable for both local development and production deployment.
 
-server:
-  port: 8080
-```
+### Start the application
 
-### Bước 3 – Chạy dự án
-
-```
+```bash
 mvn spring-boot:run
 ```
 
-Mặc định chạy tại `http://localhost:8080`.
+The backend will be available at:
+
+```
+http://localhost:8080
+```
+
+---
+
+## 📘 API Documentation
+
+Swagger UI:
+
+```
+http://localhost:8080/swagger-ui.html
+```
+
+---
+
+## ☁️ Deployment
+
+- Backend service deployed on **Render**
+- Database: **PostgreSQL (Render managed)**
+- Dockerized Spring Boot application
+- Production-ready configuration using environment variables (12-factor app)
+
+> This project is deployed in a production-like environment
+> and is publicly accessible via REST APIs.
+
+---

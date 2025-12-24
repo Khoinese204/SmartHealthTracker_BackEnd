@@ -18,11 +18,10 @@ public class HealthSummaryController {
 
     @GetMapping
     public ResponseEntity<DailySummaryDto> getDailySummary(
-            @RequestParam Long userId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        
+
         LocalDate targetDate = (date != null) ? date : LocalDate.now();
-        
-        return ResponseEntity.ok(summaryService.getDailySummary(userId, targetDate));
+
+        return ResponseEntity.ok(summaryService.getDailySummary(targetDate));
     }
 }

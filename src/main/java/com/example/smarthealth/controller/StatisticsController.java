@@ -21,51 +21,43 @@ public class StatisticsController {
 
     @GetMapping("/workout")
     public ResponseEntity<WorkoutStatsResponse> getWorkoutStats(
-            @RequestParam Long userId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
-        return ResponseEntity.ok(statisticsService.getWorkoutStats(userId, fromDate, toDate));
+        return ResponseEntity.ok(statisticsService.getWorkoutStats(fromDate, toDate));
     }
 
     @GetMapping("/sleep")
     public ResponseEntity<SleepStatsResponse> getSleepStats(
-            @RequestParam Long userId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
-        return ResponseEntity.ok(statisticsService.getSleepStats(userId, fromDate, toDate));
+        return ResponseEntity.ok(statisticsService.getSleepStats(fromDate, toDate));
     }
 
     @GetMapping("/heart-rate")
     public ResponseEntity<HeartRateStatsResponse> getHeartRateStats(
-            @RequestParam Long userId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
-        return ResponseEntity.ok(statisticsService.getHeartRateStats(userId, fromDate, toDate));
+        return ResponseEntity.ok(statisticsService.getHeartRateStats(fromDate, toDate));
     }
 
     @GetMapping("/workout/range")
     public ResponseEntity<WorkoutStatsResponse> getWorkoutStatsRange(
-            @RequestParam Long userId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to) {
-        return ResponseEntity.ok(statisticsService.getWorkoutStatsSpecific(userId, from, to));
+        return ResponseEntity.ok(statisticsService.getWorkoutStatsSpecific(from, to));
     }
 
-    // 5. Sleep theo giờ
     @GetMapping("/sleep/range")
     public ResponseEntity<SleepStatsResponse> getSleepStatsRange(
-            @RequestParam Long userId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to) {
-        return ResponseEntity.ok(statisticsService.getSleepStatsSpecific(userId, from, to));
+        return ResponseEntity.ok(statisticsService.getSleepStatsSpecific(from, to));
     }
 
-    // 6. Heart Rate theo giờ
     @GetMapping("/heart-rate/range")
     public ResponseEntity<HeartRateStatsResponse> getHeartRateStatsRange(
-            @RequestParam Long userId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to) {
-        return ResponseEntity.ok(statisticsService.getHeartRateStatsSpecific(userId, from, to));
+        return ResponseEntity.ok(statisticsService.getHeartRateStatsSpecific(from, to));
     }
 }

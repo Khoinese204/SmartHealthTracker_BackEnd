@@ -26,7 +26,7 @@ public class FeedController {
     }
 
     @Operation(summary = "Update a post (owner only)")
-    @PatchMapping("/posts/{postId}")
+    @PatchMapping("/{postId}")
     public ResponseEntity<ApiSuccess<FeedDtos.FeedItemResponse>> updatePost(
             @PathVariable Long postId,
             @RequestBody FeedDtos.UpdatePostRequest req) {
@@ -35,7 +35,7 @@ public class FeedController {
     }
 
     @Operation(summary = "Delete a post (owner only)")
-    @DeleteMapping("/posts/{postId}")
+    @DeleteMapping("/{postId}")
     public ResponseEntity<ApiSuccess<Object>> deletePost(@PathVariable Long postId) {
         feedService.deletePost(postId);
         return ResponseEntity.ok(ApiSuccess.success("Post deleted", null));
@@ -105,6 +105,13 @@ public class FeedController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         return ResponseEntity.ok(ApiSuccess.success("Shares fetched", feedService.getShares(postId, page, size)));
+    }
+
+    @Operation(summary = "Get post by id")
+    @GetMapping("/{postId}")
+    public ResponseEntity<ApiSuccess<FeedDtos.FeedItemResponse>> getPostById(@PathVariable Long postId) {
+        return ResponseEntity.ok(
+                ApiSuccess.success("Post fetched", feedService.getPostById(postId)));
     }
 
 }

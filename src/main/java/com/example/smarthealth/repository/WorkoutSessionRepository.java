@@ -14,17 +14,44 @@ import java.util.List;
 public interface WorkoutSessionRepository extends JpaRepository<WorkoutSession, Long> {
 
     @Query("SELECT new com.example.smarthealth.dto.health.WorkoutStatsResponse(" +
-           "COUNT(w), " +
-           "COALESCE(SUM(w.durationSeconds), 0L), " +
-           "COALESCE(SUM(w.distanceMeters), 0), " +
-           "COALESCE(SUM(w.calories), 0L)) " +
-           "FROM WorkoutSession w " +
-           "WHERE w.user.id = :userId " +
-           "AND w.startTime BETWEEN :start AND :end")
-    WorkoutStatsResponse getStats(@Param("userId") Long userId, 
-                                  @Param("start") LocalDateTime start, 
-                                  @Param("end") LocalDateTime end);
+            "COUNT(w), " +
+            "COALESCE(SUM(w.durationSeconds), 0L), " +
+            "COALESCE(SUM(w.distanceMeters), 0), " +
+            "COALESCE(SUM(w.calories), 0L)) " +
+            "FROM WorkoutSession w " +
+            "WHERE w.user.id = :userId " +
+            "AND w.startTime BETWEEN :start AND :end")
+    WorkoutStatsResponse getStats(@Param("userId") Long userId,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end);
+
     List<WorkoutSession> findByUserIdOrderByStartTimeDesc(Long userId);
 
     List<WorkoutSession> findByUserIdAndStartTimeBetween(Long userId, LocalDateTime start, LocalDateTime end);
+
+    @Query("""
+                select count(w)
+                from WorkoutSession w
+                where w.user.id = :userId
+                  and w.startTime between :from and :to
+            """)
+    long countWorkoutsBetween(@Param("userId") Long userId,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to);
+
+    @Query("""
+                select count(w)
+                from WorkoutSession w
+                where w.user.id = :userId
+            """)
+    long countTotalWorkouts(@Param("userId") Long userId);
+
+    List<WorkoutSession> findByUser_IdOrderByStartTimeDesc(Long userId);
+
+    List<WorkoutSession> findByUser_IdAndStartTimeBetween(Long userId, LocalDateTime start, LocalDateTime end);
+
+    List<WorkoutSession> findAllByUserIdAndStartTimeBetweenOrderByStartTimeDesc(
+            Long userId,
+            LocalDateTime start,
+            LocalDateTime end);
 }

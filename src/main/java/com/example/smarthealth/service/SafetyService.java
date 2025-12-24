@@ -1,5 +1,6 @@
 package com.example.smarthealth.service;
 
+import com.example.smarthealth.config.CurrentUserService;
 import com.example.smarthealth.dto.safety.EmergencyContactRequest;
 import com.example.smarthealth.dto.safety.FallEventRequest;
 import com.example.smarthealth.dto.safety.SosRequest;
@@ -25,12 +26,11 @@ public class SafetyService {
     private final EmergencyContactRepository contactRepository;
     private final FallEventRepository fallEventRepository;
     private final SosEventRepository sosEventRepository;
-    private final UserRepository userRepository;
+    private final CurrentUserService currentUserService;
 
     @Transactional
-    public EmergencyContact addContact(Long userId, EmergencyContactRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    public EmergencyContact addContact(EmergencyContactRequest request) {
+        User user = currentUserService.getCurrentUser();
 
         EmergencyContact contact = EmergencyContact.builder()
                 .user(user)
@@ -42,8 +42,9 @@ public class SafetyService {
         return contactRepository.save(contact);
     }
 
-    public List<EmergencyContact> getContacts(Long userId) {
-        return contactRepository.findByUserId(userId);
+    public List<EmergencyContact> getContacts() {
+        User user = currentUserService.getCurrentUser();
+        return contactRepository.findByUserId(user.getId());
     }
 
     @Transactional
@@ -52,9 +53,8 @@ public class SafetyService {
     }
 
     @Transactional
-    public FallEvent logFallEvent(Long userId, FallEventRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    public FallEvent logFallEvent(FallEventRequest request) {
+        User user = currentUserService.getCurrentUser();
 
         FallEvent event = FallEvent.builder()
                 .user(user)
@@ -95,9 +95,8 @@ public class SafetyService {
     }
 
     @Transactional
-    public SosEvent triggerSos(Long userId, SosRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    public SosEvent triggerSos(SosRequest request) {
+        User user = currentUserService.getCurrentUser();
 
         SosEvent event = SosEvent.builder()
                 .user(user)

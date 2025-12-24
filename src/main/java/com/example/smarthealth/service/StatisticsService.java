@@ -1,5 +1,6 @@
 package com.example.smarthealth.service;
 
+import com.example.smarthealth.config.CurrentUserService;
 import com.example.smarthealth.dto.health.HeartRateStatsResponse;
 import com.example.smarthealth.dto.health.SleepStatsResponse;
 import com.example.smarthealth.dto.health.WorkoutStatsResponse;
@@ -20,37 +21,44 @@ public class StatisticsService {
     private final WorkoutSessionRepository workoutRepository;
     private final SleepSessionRepository sleepRepository;
     private final HeartRateRecordRepository heartRateRepository;
+    private final CurrentUserService currentUserService;
 
-    public WorkoutStatsResponse getWorkoutStats(Long userId, LocalDate fromDate, LocalDate toDate) {
+    public WorkoutStatsResponse getWorkoutStats(LocalDate fromDate, LocalDate toDate) {
+        Long userId = currentUserService.getCurrentUser().getId();
         return workoutRepository.getStats(
                 userId,
                 fromDate.atStartOfDay(),
                 toDate.atTime(LocalTime.MAX));
     }
 
-    public SleepStatsResponse getSleepStats(Long userId, LocalDate fromDate, LocalDate toDate) {
+    public SleepStatsResponse getSleepStats(LocalDate fromDate, LocalDate toDate) {
+        Long userId = currentUserService.getCurrentUser().getId();
         return sleepRepository.getStats(
                 userId,
                 fromDate.atStartOfDay(),
                 toDate.atTime(LocalTime.MAX));
     }
 
-    public HeartRateStatsResponse getHeartRateStats(Long userId, LocalDate fromDate, LocalDate toDate) {
+    public HeartRateStatsResponse getHeartRateStats(LocalDate fromDate, LocalDate toDate) {
+        Long userId = currentUserService.getCurrentUser().getId();
         return heartRateRepository.getStats(
                 userId,
                 fromDate.atStartOfDay(),
                 toDate.atTime(LocalTime.MAX));
     }
 
-    public WorkoutStatsResponse getWorkoutStatsSpecific(Long userId, LocalDateTime from, LocalDateTime to) {
+    public WorkoutStatsResponse getWorkoutStatsSpecific(LocalDateTime from, LocalDateTime to) {
+        Long userId = currentUserService.getCurrentUser().getId();
         return workoutRepository.getStats(userId, from, to);
     }
 
-    public SleepStatsResponse getSleepStatsSpecific(Long userId, LocalDateTime from, LocalDateTime to) {
+    public SleepStatsResponse getSleepStatsSpecific(LocalDateTime from, LocalDateTime to) {
+        Long userId = currentUserService.getCurrentUser().getId();
         return sleepRepository.getStats(userId, from, to);
     }
 
-    public HeartRateStatsResponse getHeartRateStatsSpecific(Long userId, LocalDateTime from, LocalDateTime to) {
+    public HeartRateStatsResponse getHeartRateStatsSpecific(LocalDateTime from, LocalDateTime to) {
+        Long userId = currentUserService.getCurrentUser().getId();
         return heartRateRepository.getStats(userId, from, to);
     }
 }

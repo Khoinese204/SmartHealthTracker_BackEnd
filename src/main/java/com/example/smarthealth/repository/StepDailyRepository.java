@@ -19,4 +19,16 @@ public interface StepDailyRepository extends JpaRepository<StepDaily, Long> {
 
     @Query("select s from StepDaily s where s.user.id = :userId order by s.date asc")
     java.util.List<StepDaily> findAllByUserId(@Param("userId") Long userId);
+
+    @Query("""
+                select coalesce(sum(s.totalSteps), 0)
+                from StepDaily s
+                where s.user.id = :userId
+                  and s.date between :from and :to
+            """)
+    long sumStepsBetween(@Param("userId") Long userId,
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to);
+
+    Optional<StepDaily> findByUser_IdAndDate(Long userId, LocalDate date);
 }
