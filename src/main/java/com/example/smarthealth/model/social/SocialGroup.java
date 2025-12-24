@@ -27,7 +27,7 @@ public class SocialGroup {
     private String description;
 
     @Column(name = "is_public", nullable = false)
-    private boolean isPublic = true;
+    private boolean isPublic = false;
 
     @Column(name = "owner_id", nullable = false)
     private Long ownerId;
