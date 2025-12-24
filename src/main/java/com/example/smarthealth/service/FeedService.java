@@ -234,6 +234,41 @@ public class FeedService {
                 .build());
     }
 
+    @Transactional(readOnly = true)
+    public FeedDtos.FeedItemResponse getPostById(Long postId) {
+        User me = currentUserService.getCurrentUser();
+
+        // 1) Lấy post
+        Post p = postRepository.findById(postId)
+                .orElseThrow(() -> new EntityNotFoundException("Post not found"));
+
+        // 3) Build userMap (1 user thôi)
+        User author = userRepository.findById(p.getUserId()).orElse(null);
+        UserSummaryDto authorSummary = (author == null)
+                ? null
+                : new UserSummaryDto(author.getId(), author.getFullName(), author.getAvatarUrl());
+
+        // 4) Like/comment count + likedByMe
+        long likeCount = postLikeRepository.countByPostId(p.getId());
+        long commentCount = postCommentRepository.countByPostId(p.getId());
+        boolean likedByMe = postLikeRepository.existsByPostIdAndUserId(p.getId(), me.getId());
+
+        // 5) Response
+        return FeedDtos.FeedItemResponse.builder()
+                .id(p.getId())
+                .user(authorSummary)
+                .content(p.getContent())
+                .imageUrl(p.getImageUrl())
+                .achievementUserId(p.getAchievementUserId())
+                .createdAt(p.getCreatedAt())
+                .visibility(p.getVisibility())
+                .likeCount(likeCount)
+                .commentCount(commentCount)
+                .likedByMe(likedByMe)
+                .isShare(false)
+                .build();
+    }
+
     @Transactional
     public void likePost(Long postId) {
         User me = currentUserService.getCurrentUser();
