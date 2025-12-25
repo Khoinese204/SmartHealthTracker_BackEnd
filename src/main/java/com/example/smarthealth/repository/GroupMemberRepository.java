@@ -1,5 +1,6 @@
 package com.example.smarthealth.repository;
 
+import com.example.smarthealth.enums.GroupMemberRole;
 import com.example.smarthealth.model.social.GroupMember;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
@@ -23,4 +24,6 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
 
     @Query("select gm.groupId, count(gm) from GroupMember gm where gm.groupId in :groupIds group by gm.groupId")
     List<Object[]> countMembersByGroupIds(List<Long> groupIds);
+
+    boolean existsByGroupIdAndUserIdAndRole(Long groupId, Long userId, GroupMemberRole role);
 }

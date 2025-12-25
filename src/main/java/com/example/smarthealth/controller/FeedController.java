@@ -41,7 +41,7 @@ public class FeedController {
         return ResponseEntity.ok(ApiSuccess.success("Post deleted", null));
     }
 
-    @Operation(summary = "Get latest posts (paginated, newest first)")
+    @Operation(summary = "Get latest newsfeed (only PUBLIC)")
     @GetMapping
     public ResponseEntity<ApiSuccess<Page<FeedDtos.FeedItemResponse>>> getFeed(
             @RequestParam(defaultValue = "0") int page,
@@ -112,6 +112,16 @@ public class FeedController {
     public ResponseEntity<ApiSuccess<FeedDtos.FeedItemResponse>> getPostById(@PathVariable Long postId) {
         return ResponseEntity.ok(
                 ApiSuccess.success("Post fetched", feedService.getPostById(postId)));
+    }
+
+    @Operation(summary = "Get group newsfeed (only GROUP)")
+    @GetMapping("/{groupId}/feed")
+    public ResponseEntity<ApiSuccess<Page<FeedDtos.FeedItemResponse>>> groupFeed(
+            @PathVariable Long groupId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(
+                ApiSuccess.success("Group feed fetched", feedService.getGroupFeed(groupId, page, size)));
     }
 
 }
