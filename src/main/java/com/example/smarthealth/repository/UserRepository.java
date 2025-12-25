@@ -26,4 +26,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<Long> findAllActiveUserIds();
 
     Page<User> findByIsActive(boolean active, Pageable pageable);
+
+    List<User> findTop10ByEmailIgnoreCaseStartingWith(String emailPrefix);
+
+    // hoặc flexible hơn:
+    List<User> findTop10ByEmailContainingIgnoreCase(String keyword);
 }

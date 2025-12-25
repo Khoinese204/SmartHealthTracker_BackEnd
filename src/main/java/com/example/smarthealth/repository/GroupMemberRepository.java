@@ -26,4 +26,7 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> 
     List<Object[]> countMembersByGroupIds(List<Long> groupIds);
 
     boolean existsByGroupIdAndUserIdAndRole(Long groupId, Long userId, GroupMemberRole role);
+
+    @Query("select gm.userId from GroupMember gm where gm.groupId = :groupId")
+    List<Long> findUserIdsByGroupId(@Param("groupId") Long groupId);
 }

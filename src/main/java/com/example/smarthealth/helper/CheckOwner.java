@@ -49,4 +49,11 @@ public class CheckOwner {
 
         return false;
     }
+
+    public boolean isGroupOwner(Long groupId, Long userId) {
+        return groupMemberRepository.existsByGroupIdAndUserIdAndRole(
+                groupId,
+                userId,
+                GroupMemberRole.OWNER);
+    }
 }

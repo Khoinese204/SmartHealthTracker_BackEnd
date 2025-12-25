@@ -2,11 +2,15 @@ package com.example.smarthealth.controller;
 
 import com.example.smarthealth.dto.common.ApiSuccess;
 import com.example.smarthealth.dto.social.FeedDtos;
+import com.example.smarthealth.dto.social.GroupDtos;
 import com.example.smarthealth.service.FeedService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

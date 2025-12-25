@@ -157,4 +157,13 @@ public class GroupDtos {
         @Schema(example = "2025-01-08T10:30:00Z")
         private Instant expiresAt;
     }
+
+    @Builder
+    @Getter
+    public static class InviteSearchUserResponse {
+        private UserSummaryDto user; // id/fullName/avatarUrl
+        private String email; // để FE hiển thị
+        private boolean alreadyMember; // disable invite
+        private boolean pendingInvited; // disable invite
+    }
 }

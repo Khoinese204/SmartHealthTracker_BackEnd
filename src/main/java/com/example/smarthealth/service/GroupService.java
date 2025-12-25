@@ -2,6 +2,7 @@ package com.example.smarthealth.service;
 
 import com.example.smarthealth.config.CurrentUserService;
 import com.example.smarthealth.dto.social.GroupDtos;
+import com.example.smarthealth.dto.social.UserSummaryDto;
 import com.example.smarthealth.enums.GroupMemberRole;
 import com.example.smarthealth.enums.InviteStatus;
 import com.example.smarthealth.helper.ToUserSummary;
@@ -403,6 +404,45 @@ public class GroupService {
                 // Option B: soft status (nếu bạn muốn audit) -> dùng dòng dưới thay delete
                 // inv.setStatus(InviteStatus.DECLINED);
                 // groupInviteRepository.save(inv);
+        }
+
+        @Transactional(readOnly = true)
+        public List<GroupDtos.InviteSearchUserResponse> searchUsersToInvite(Long groupId, String q, int limit) {
+                User me = currentUserService.getCurrentUser();
+
+                if (q == null || q.trim().isBlank())
+                        return List.of();
+
+                // ✅ ABAC: phải là owner của group mới được search để invite
+                if (!groupMemberRepository.existsByGroupIdAndUserIdAndRole(
+                                groupId,
+                                me.getId(),
+                                GroupMemberRole.OWNER)) {
+                        // chống probe groupId
+                        throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found");
+                }
+                int safeLimit = Math.min(Math.max(limit, 1), 20); // clamp 1..20
+                String keyword = q.trim();
+
+                // Search users by email
+                List<User> candidates = userRepository.findTop10ByEmailIgnoreCaseStartingWith(keyword);
+                if (candidates.isEmpty())
+                        return List.of();
+
+                // Lấy member ids + pending ids để set flag
+                Set<Long> memberIds = new HashSet<>(groupMemberRepository.findUserIdsByGroupId(groupId));
+                Set<Long> pendingIds = new HashSet<>(groupInviteRepository.findPendingInvitedUserIds(groupId));
+
+                return candidates.stream()
+                                .filter(u -> !Objects.equals(u.getId(), me.getId())) // không mời chính mình
+                                .limit(safeLimit)
+                                .map(u -> GroupDtos.InviteSearchUserResponse.builder()
+                                                .user(new UserSummaryDto(u.getId(), u.getFullName(), u.getAvatarUrl()))
+                                                .email(u.getEmail())
+                                                .alreadyMember(memberIds.contains(u.getId()))
+                                                .pendingInvited(pendingIds.contains(u.getId()))
+                                                .build())
+                                .toList();
         }
 
 }

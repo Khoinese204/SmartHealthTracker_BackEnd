@@ -1,12 +1,15 @@
 package com.example.smarthealth.controller;
 
 import com.example.smarthealth.dto.common.ApiSuccess;
+import com.example.smarthealth.dto.social.FeedDtos;
 import com.example.smarthealth.dto.social.GroupDtos;
 import com.example.smarthealth.service.GroupService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -45,12 +48,11 @@ public class GroupController {
         return ResponseEntity.ok(ApiSuccess.success("Group members fetched", groupService.members(groupId)));
     }
 
-     @Operation(summary = "Invite a user to join a private group (creates a pending invitation)")
+    @Operation(summary = "Invite a user to join a private group (owner only)")
     @PostMapping("/{groupId}/invites")
     public ResponseEntity<ApiSuccess<GroupDtos.InviteResponse>> invite(
             @PathVariable Long groupId,
-            @Valid @RequestBody GroupDtos.CreateInviteRequest req
-    ) {
+            @Valid @RequestBody GroupDtos.CreateInviteRequest req) {
         return ResponseEntity.ok(ApiSuccess.success("Invitation created", groupService.invite(groupId, req)));
     }
 
@@ -74,7 +76,7 @@ public class GroupController {
         return ResponseEntity.ok(ApiSuccess.success("Invitation declined", null));
     }
 
-       @Operation(summary = "Leave a group -> remove from My Groups")
+    @Operation(summary = "Leave a group -> remove from My Groups")
     @PostMapping("/{groupId}/leave")
     public ResponseEntity<ApiSuccess<Void>> leave(@PathVariable Long groupId) {
         groupService.leaveGroup(groupId);
@@ -85,8 +87,7 @@ public class GroupController {
     @DeleteMapping("/{groupId}/members/{memberUserId}")
     public ResponseEntity<ApiSuccess<Void>> removeMember(
             @PathVariable Long groupId,
-            @PathVariable Long memberUserId
-    ) {
+            @PathVariable Long memberUserId) {
         groupService.removeMember(groupId, memberUserId);
         return ResponseEntity.ok(ApiSuccess.success("Member removed", null));
     }
@@ -95,11 +96,23 @@ public class GroupController {
     @DeleteMapping("/{groupId}/invites/{inviteId}")
     public ResponseEntity<ApiSuccess<Void>> revokeInvite(
             @PathVariable Long groupId,
-            @PathVariable Long inviteId
-    ) {
+            @PathVariable Long inviteId) {
         groupService.revokeInvite(groupId, inviteId);
         return ResponseEntity.ok(ApiSuccess.success("Invitation revoked", null));
     }
+
+    @Operation(summary = "Search users by email to invite into a group (owner only)")
+    @GetMapping("/{groupId}/invite-search")
+    public ResponseEntity<ApiSuccess<List<GroupDtos.InviteSearchUserResponse>>> inviteSearch(
+            @PathVariable Long groupId,
+            @RequestParam String q,
+            @RequestParam(defaultValue = "10") int limit) {
+        return ResponseEntity.ok(
+                ApiSuccess.success("Invite search results", groupService.searchUsersToInvite(groupId, q, limit)));
+    }
+
+    
+
 
 
 }
