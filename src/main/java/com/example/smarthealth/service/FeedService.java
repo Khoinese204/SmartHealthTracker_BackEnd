@@ -4,9 +4,11 @@ import com.example.smarthealth.config.CurrentUserService;
 import com.example.smarthealth.dto.social.FeedDtos;
 import com.example.smarthealth.dto.social.UserSummaryDto;
 import com.example.smarthealth.enums.PostVisibility;
+import com.example.smarthealth.helper.CheckOwner;
 import com.example.smarthealth.model.auth.User;
 import com.example.smarthealth.model.social.*;
 import com.example.smarthealth.repository.GroupMemberRepository;
+import com.example.smarthealth.repository.GroupRepository;
 import com.example.smarthealth.repository.PostCommentRepository;
 import com.example.smarthealth.repository.PostLikeRepository;
 import com.example.smarthealth.repository.PostRepository;
@@ -17,8 +19,10 @@ import java.util.function.Function;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -34,116 +38,51 @@ public class FeedService {
     private final PostShareRepository postShareRepository;
     private final UserRepository userRepository;
     private final GroupMemberRepository groupMemberRepository;
+    private final GroupRepository groupRepository;
+    private final CheckOwner checkOwner;
 
     @Transactional
     public FeedDtos.FeedItemResponse createPost(FeedDtos.CreatePostRequest req) {
         User me = currentUserService.getCurrentUser();
 
-        PostVisibility visibility = req.getVisibility() == null ? PostVisibility.PUBLIC : req.getVisibility();
-
-        if (visibility == PostVisibility.GROUP && req.getGroupId() == null) {
-            throw new IllegalArgumentException("groupId is required when visibility=GROUP");
+        if (req.getContent() == null || req.getContent().trim().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "content is required");
         }
 
-        UserSummaryDto meSummary = new UserSummaryDto(
-                me.getId(),
-                me.getFullName(),
-                me.getAvatarUrl());
+        PostVisibility vis = (req.getVisibility() != null) ? req.getVisibility() : PostVisibility.PUBLIC;
+
+        Long groupId = null;
+        if (vis == PostVisibility.GROUP) {
+            if (req.getGroupId() == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "groupId is required when visibility=GROUP");
+            }
+
+            // ✅ ABAC: OWNER/MEMBER đều post được
+            boolean isMember = groupMemberRepository.existsByGroupIdAndUserId(req.getGroupId(), me.getId());
+            if (!isMember) {
+                // chống probe groupId
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found");
+            }
+            groupId = req.getGroupId();
+        } else {
+            // PUBLIC/PRIVATE => không gắn group
+            if (req.getGroupId() != null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "groupId must be null when visibility != GROUP");
+            }
+        }
 
         Post saved = postRepository.save(Post.builder()
                 .userId(me.getId())
-                .content(req.getContent())
+                .content(req.getContent().trim())
                 .imageUrl(req.getImageUrl())
+                .visibility(vis)
+                .groupId(groupId)
                 .achievementUserId(req.getAchievementUserId())
-                .visibility(visibility)
-                .groupId(visibility == PostVisibility.GROUP ? req.getGroupId() : null)
                 .build());
 
-        return FeedDtos.FeedItemResponse.builder()
-                .id(saved.getId())
-                .user(meSummary)
-                .content(saved.getContent())
-                .imageUrl(saved.getImageUrl())
-                .achievementUserId(saved.getAchievementUserId())
-                .createdAt(saved.getCreatedAt())
-                .visibility(saved.getVisibility()) // ✅ giờ không còn null
-                .likeCount(0)
-                .commentCount(0)
-                .likedByMe(false)
-                .isShare(false)
-                .build();
-    }
+        UserSummaryDto meSummary = new UserSummaryDto(me.getId(), me.getFullName(), me.getAvatarUrl());
 
-    @Transactional
-    public FeedDtos.FeedItemResponse updatePost(Long postId, FeedDtos.UpdatePostRequest req) {
-        User me = currentUserService.getCurrentUser();
-
-        Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("Post not found: " + postId));
-
-        // chỉ owner được sửa
-        if (!Objects.equals(post.getUserId(), me.getId())) {
-            throw new IllegalArgumentException("You are not allowed to update this post");
-        }
-
-        boolean hasAnyUpdate = (req.getContent() != null) ||
-                (req.getImageUrl() != null) ||
-                (req.getVisibility() != null) ||
-                (req.getGroupId() != null);
-
-        if (!hasAnyUpdate) {
-            throw new IllegalArgumentException("Nothing to update");
-        }
-
-        // content
-        if (req.getContent() != null) {
-            String c = req.getContent().trim();
-            if (c.isBlank())
-                throw new IllegalArgumentException("content cannot be blank");
-            post.setContent(c);
-        }
-
-        // imageUrl (cho phép set null để remove ảnh nếu FE gửi null)
-        if (req.getImageUrl() != null) {
-            post.setImageUrl(req.getImageUrl().trim().isBlank() ? null : req.getImageUrl().trim());
-        }
-
-        // visibility + groupId rule
-        if (req.getVisibility() != null) {
-            PostVisibility newVis = req.getVisibility();
-
-            if (newVis == PostVisibility.GROUP) {
-                // groupId bắt buộc khi GROUP (ưu tiên req.groupId nếu có, nếu không thì dùng
-                // cái cũ)
-                Long groupId = (req.getGroupId() != null) ? req.getGroupId() : post.getGroupId();
-                if (groupId == null)
-                    throw new IllegalArgumentException("groupId is required when visibility=GROUP");
-                post.setGroupId(groupId);
-            } else {
-                // không phải group thì groupId phải null
-                post.setGroupId(null);
-            }
-
-            post.setVisibility(newVis);
-        } else {
-            // visibility không đổi nhưng groupId có thể được gửi lên (chỉ hợp lệ nếu post
-            // đang GROUP)
-            if (req.getGroupId() != null) {
-                if (post.getVisibility() != PostVisibility.GROUP) {
-                    throw new IllegalArgumentException("groupId can only be updated when visibility=GROUP");
-                }
-                post.setGroupId(req.getGroupId());
-            }
-        }
-
-        Post saved = postRepository.save(post);
-
-        UserSummaryDto meSummary = new UserSummaryDto(
-                me.getId(),
-                me.getFullName(),
-                me.getAvatarUrl());
-
-        // Trả về response giống feed item
         return FeedDtos.FeedItemResponse.builder()
                 .id(saved.getId())
                 .user(meSummary)
@@ -160,21 +99,125 @@ public class FeedService {
     }
 
     @Transactional
+    public FeedDtos.FeedItemResponse updatePost(Long postId, FeedDtos.UpdatePostRequest req) {
+        User me = currentUserService.getCurrentUser();
+
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Post not found"));
+
+        // ✅ ABAC: author OR group owner (moderation) mới được sửa
+        if (!checkOwner.canEditOrDelete(me, post)) {
+            // chống IDOR/probing
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Post not found");
+            // hoặc:
+            // throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not allowed");
+        }
+
+        boolean hasAnyUpdate = (req.getContent() != null)
+                || (req.getImageUrl() != null)
+                || (req.getVisibility() != null)
+                || (req.getGroupId() != null);
+
+        if (!hasAnyUpdate) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Nothing to update");
+        }
+
+        // content
+        if (req.getContent() != null) {
+            String c = req.getContent().trim();
+            if (c.isBlank())
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "content cannot be blank");
+            post.setContent(c);
+        }
+
+        // imageUrl (cho phép set null bằng cách gửi chuỗi rỗng)
+        if (req.getImageUrl() != null) {
+            String img = req.getImageUrl().trim();
+            post.setImageUrl(img.isBlank() ? null : img);
+        }
+
+        // visibility + groupId rule
+        if (req.getVisibility() != null) {
+            PostVisibility newVis = req.getVisibility();
+
+            if (newVis == PostVisibility.GROUP) {
+                Long newGroupId = (req.getGroupId() != null) ? req.getGroupId() : post.getGroupId();
+                if (newGroupId == null) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                            "groupId is required when visibility=GROUP");
+                }
+
+                // ✅ ABAC: muốn set GROUP vào group nào => phải là member group đó
+                boolean isMember = groupMemberRepository.existsByGroupIdAndUserId(newGroupId, me.getId());
+                if (!isMember)
+                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found");
+
+                post.setGroupId(newGroupId);
+                post.setVisibility(PostVisibility.GROUP);
+
+            } else {
+                // PUBLIC/PRIVATE => groupId null
+                post.setGroupId(null);
+                post.setVisibility(newVis);
+            }
+
+        } else {
+            // visibility không đổi nhưng groupId gửi lên
+            if (req.getGroupId() != null) {
+                if (post.getVisibility() != PostVisibility.GROUP) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                            "groupId can only be updated when visibility=GROUP");
+                }
+
+                // ✅ ABAC: đổi groupId => phải là member group mới
+                boolean isMember = groupMemberRepository.existsByGroupIdAndUserId(req.getGroupId(), me.getId());
+                if (!isMember)
+                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found");
+
+                post.setGroupId(req.getGroupId());
+            }
+        }
+
+        Post saved = postRepository.save(post);
+
+        // author summary của bài (không phải me, vì moderation có thể sửa bài người
+        // khác)
+        User author = userRepository.findById(saved.getUserId()).orElse(null);
+        UserSummaryDto authorSummary = (author == null)
+                ? null
+                : new UserSummaryDto(author.getId(), author.getFullName(), author.getAvatarUrl());
+
+        return FeedDtos.FeedItemResponse.builder()
+                .id(saved.getId())
+                .user(authorSummary)
+                .content(saved.getContent())
+                .imageUrl(saved.getImageUrl())
+                .achievementUserId(saved.getAchievementUserId())
+                .createdAt(saved.getCreatedAt())
+                .visibility(saved.getVisibility())
+                .likeCount(postLikeRepository.countByPostId(saved.getId()))
+                .commentCount(postCommentRepository.countByPostId(saved.getId()))
+                .likedByMe(postLikeRepository.existsByPostIdAndUserId(saved.getId(), me.getId()))
+                .isShare(false)
+                .build();
+    }
+
+    @Transactional
     public void deletePost(Long postId) {
         User me = currentUserService.getCurrentUser();
 
         Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new IllegalArgumentException("Post not found: " + postId));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Post not found"));
 
-        if (!Objects.equals(post.getUserId(), me.getId())) {
-            throw new IllegalArgumentException("You are not allowed to delete this post");
+        // ✅ ABAC: author OR group owner mới được xoá
+        if (!checkOwner.canEditOrDelete(me, post)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Post not found");
         }
 
-        // Nếu bạn có comment/like/share FK cascade thì ok.
-        // Nếu chưa cascade: cần xóa likes/comments/shares trước để tránh FK constraint.
+        // Nếu chưa cascade FK: xóa likes/comments trước
         // postLikeRepository.deleteByPostId(postId);
         // postCommentRepository.deleteByPostId(postId);
-        // postShareRepository.deleteByOriginalPostId(postId); (tùy bạn định nghĩa)
+
         postRepository.delete(post);
     }
 
@@ -183,24 +226,11 @@ public class FeedService {
         User me = currentUserService.getCurrentUser();
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
 
-        List<Long> myGroupIds = groupMemberRepository.findGroupIdsByUserId(me.getId());
+        Page<Post> posts = postRepository.findByVisibility(PostVisibility.PUBLIC, pageable);
 
-        Page<Post> posts = (myGroupIds == null || myGroupIds.isEmpty())
-                ? postRepository.findVisibleFeedNoGroups(
-                        me.getId(),
-                        PostVisibility.PUBLIC,
-                        PostVisibility.PRIVATE,
-                        pageable)
-                : postRepository.findVisibleFeed(
-                        me.getId(),
-                        myGroupIds,
-                        PostVisibility.PUBLIC,
-                        PostVisibility.PRIVATE,
-                        PostVisibility.GROUP,
-                        pageable);
-
-        if (posts.isEmpty())
+        if (posts.isEmpty()) {
             return posts.map(p -> FeedDtos.FeedItemResponse.builder().build());
+        }
 
         List<Post> postList = posts.getContent();
 
@@ -210,10 +240,7 @@ public class FeedService {
         Map<Long, UserSummaryDto> userMap = userRepository.findAllById(userIds).stream()
                 .collect(Collectors.toMap(
                         User::getId,
-                        u -> new UserSummaryDto(
-                                u.getId(),
-                                u.getFullName(),
-                                u.getAvatarUrl())));
+                        u -> new UserSummaryDto(u.getId(), u.getFullName(), u.getAvatarUrl())));
 
         Map<Long, Long> likeCounts = toCountMap(postLikeRepository.countLikesByPostIds(postIds));
         Map<Long, Long> commentCounts = toCountMap(postCommentRepository.countCommentsByPostIds(postIds));
@@ -221,7 +248,7 @@ public class FeedService {
 
         return posts.map(p -> FeedDtos.FeedItemResponse.builder()
                 .id(p.getId())
-                .user(userMap.get(p.getUserId())) // ✅ UserSummaryDto
+                .user(userMap.get(p.getUserId()))
                 .content(p.getContent())
                 .imageUrl(p.getImageUrl())
                 .achievementUserId(p.getAchievementUserId())
@@ -239,8 +266,9 @@ public class FeedService {
         User me = currentUserService.getCurrentUser();
 
         // 1) Lấy post
-        Post p = postRepository.findById(postId)
-                .orElseThrow(() -> new EntityNotFoundException("Post not found"));
+        Post p = postRepository.findReadableById(postId, me.getId())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND));
 
         // 3) Build userMap (1 user thôi)
         User author = userRepository.findById(p.getUserId()).orElse(null);
@@ -248,12 +276,10 @@ public class FeedService {
                 ? null
                 : new UserSummaryDto(author.getId(), author.getFullName(), author.getAvatarUrl());
 
-        // 4) Like/comment count + likedByMe
         long likeCount = postLikeRepository.countByPostId(p.getId());
         long commentCount = postCommentRepository.countByPostId(p.getId());
         boolean likedByMe = postLikeRepository.existsByPostIdAndUserId(p.getId(), me.getId());
 
-        // 5) Response
         return FeedDtos.FeedItemResponse.builder()
                 .id(p.getId())
                 .user(authorSummary)
@@ -474,6 +500,64 @@ public class FeedService {
         return likesPage.map(like -> FeedDtos.LikeUserResponse.builder()
                 .user(userMap.get(like.getUserId())) // ✅ trả thẳng UserSummaryDto
                 .likedAt(like.getCreatedAt())
+                .build());
+    }
+
+    @Transactional(readOnly = true)
+    public Page<FeedDtos.FeedItemResponse> getGroupFeed(Long groupId, int page, int size) {
+        User me = currentUserService.getCurrentUser();
+
+        // (optional) group tồn tại không?
+        if (!groupRepository.existsById(groupId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found");
+        }
+
+        // ✅ ABAC: không phải member => chặn luôn (khuyên dùng 404 để chống probe)
+        boolean isMember = groupMemberRepository.existsByGroupIdAndUserId(groupId, me.getId());
+        if (!isMember) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Group not found");
+            // hoặc 403 nếu bạn muốn rõ ràng:
+            // throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not a member of this
+            // group");
+        }
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        // giờ query không cần exists membership nữa cũng được
+        Page<Post> posts = postRepository.findByGroupIdAndVisibilityIn(
+                groupId,
+                List.of(PostVisibility.GROUP, PostVisibility.PRIVATE),
+                pageable);
+
+        if (posts.isEmpty()) {
+            return posts.map(p -> FeedDtos.FeedItemResponse.builder().build());
+        }
+
+        List<Post> postList = posts.getContent();
+        List<Long> postIds = postList.stream().map(Post::getId).toList();
+        List<Long> userIds = postList.stream().map(Post::getUserId).distinct().toList();
+
+        Map<Long, UserSummaryDto> userMap = userRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(
+                        User::getId,
+                        u -> new UserSummaryDto(u.getId(), u.getFullName(), u.getAvatarUrl())));
+
+        Map<Long, Long> likeCounts = toCountMap(postLikeRepository.countLikesByPostIds(postIds));
+        Map<Long, Long> commentCounts = toCountMap(postCommentRepository.countCommentsByPostIds(postIds));
+        Set<Long> likedByMe = new HashSet<>(postLikeRepository.findLikedPostIds(me.getId(), postIds));
+
+        return posts.map(p -> FeedDtos.FeedItemResponse.builder()
+                .id(p.getId())
+                .user(userMap.get(p.getUserId()))
+                .content(p.getContent())
+                .imageUrl(p.getImageUrl())
+                .achievementUserId(p.getAchievementUserId())
+                .createdAt(p.getCreatedAt())
+                .visibility(p.getVisibility())
+                .likeCount(likeCounts.getOrDefault(p.getId(), 0L))
+                .commentCount(commentCounts.getOrDefault(p.getId(), 0L))
+                .likedByMe(likedByMe.contains(p.getId()))
+                .isShare(false)
                 .build());
     }
 
