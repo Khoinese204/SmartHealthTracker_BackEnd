@@ -69,7 +69,6 @@ public class WorkoutService {
         return sessionRepository.findAllByUserIdAndStartTimeBetweenOrderByStartTimeDesc(userId, start, end);
     }
 
-    // ... code cũ ...
 
     public WorkoutSession getWorkoutById(Long id) {
         WorkoutSession session = sessionRepository.findById(id)
